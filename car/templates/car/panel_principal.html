@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-3">
+  <h3 class="mb-3">🔧 Panel Principal</h3>
+
+  <div class="d-grid mb-3">
+    <a href="{% url 'ingreso' %}" class="btn btn-success btn-lg">+ Nuevo Ingreso</a>
+
+    <a href="{% url 'componente_list' %}" class="btn btn-outline-dark btn-lg">🧩 Administrar Componentes</a>
+
+    <a href="{% url 'plano_interactivo' %}" class="btn btn-primary btn-lg">🛠️ Plano Interactivo</a>
+  </div>
+
+  
+
+</div>
+{% endblock %}

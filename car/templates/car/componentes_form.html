@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-3">
+  <h4 class="mb-3">{{ titulo }}</h4>
+
+{% if messages %}
+    <div class="alert alert-warning">
+      {% for message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+
+  
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      {{ form.nombre }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Código</label>
+      {{ form.codigo }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Padre (opcional)</label>
+      {{ form.padre }}
+      <div class="form-text">Útil para jerarquías: Motor → Correa → Tensor…</div>
+    </div>
+
+    <div class="form-check mb-3">
+      {{ form.activo }} <label class="form-check-label">Activo</label>
+    </div>
+
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+      <a href="{% url 'componente_list' %}" class="btn btn-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

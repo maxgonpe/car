@@ -1,0 +1,28 @@
+<ul class="list-group">
+  {% for componente in componentes %}
+    <li class="list-group-item">
+      <details>
+        <summary class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ componente.nombre }}</strong>
+            <span class="text-muted small">
+              • Código: {{ componente.codigo|default:"—" }}
+              • Activo: {{ componente.activo|yesno:"Sí,No" }}
+            </span>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <a href="{% url 'componente_update' componente.id %}" class="btn btn-outline-primary">Editar</a>
+            <a href="{% url 'componente_delete' componente.id %}" class="btn btn-outline-danger">Eliminar</a>
+          </div>
+        </summary>
+
+        {% with hijos=componente.hijos.all %}
+          {% if hijos %}
+            {% include 'car/componentes_tree.html' with componentes=hijos %}
+          {% endif %}
+        {% endwith %}
+      </details>
+    </li>
+  {% endfor %}
+</ul>
+

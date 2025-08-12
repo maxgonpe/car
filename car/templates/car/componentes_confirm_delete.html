@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <div class="alert alert-warning">
+    <h5 class="mb-2">¿Eliminar componente?</h5>
+    <p class="mb-0"><strong>{{ componente.nombre }}</strong></p>
+    <p class="small text-muted">Código: {{ componente.codigo|default:"—" }}</p>
+    {% if componente.padre %}
+      <p class="small text-muted">Padre: {{ componente.padre.nombre }}</p>
+    {% endif %}
+    <p class="small text-muted">Activo: {{ componente.activo|yesno:"Sí,No" }}</p>
+  </div>
+
+  <form method="post" class="d-grid gap-2">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'componente_list' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

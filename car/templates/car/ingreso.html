@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Ingreso de Diagnóstico</h2>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <!-- ---------------- CLIENTE ---------------- -->
+    <h3>Cliente</h3>
+
+    <div class="mb-3">
+      <label class="form-label">Elegir cliente existente:</label>
+      <select id="cliente_existente" name="cliente_existente" class="form-select">
+        <option value="">-- Nuevo cliente --</option>
+        {% for cliente in clientes_existentes %}
+          <option value="{{ cliente.id }}"
+            {% if selected_cliente and selected_cliente|stringformat:"s" == cliente.id|stringformat:"s" %} selected {% endif %}>
+            {{ cliente.nombre }} - {{ cliente.telefono }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="nuevo_cliente_campos">
+      {# Muestra errores generales del form #}
+      {% if cliente_form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ cliente_form.non_field_errors }}
+        </div>
+      {% endif %}
+      {{ cliente_form.as_p }}
+    </div>
+
+    <hr>
+
+    <!-- ---------------- VEHÍCULO ---------------- -->
+    <h3>Vehículo</h3>
+
+    <div class="mb-3">
+      <label class="form-label">Seleccionar vehículo existente:</label>
+      <select id="vehiculo_select" name="vehiculo_existente" class="form-select">
+        <option value="">-- Nuevo vehículo --</option>
+        {% for veh in vehiculos_existentes %}
+          <option value="{{ veh.id }}"
+            {% if selected_vehiculo and selected_vehiculo|stringformat:"s" == veh.id|stringformat:"s" %} selected {% endif %}>
+            {{ veh.placa }} • {{ veh.marca }} {{ veh.modelo }} ({{ veh.anio }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="vehiculo_fields">
+      {% if vehiculo_form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ vehiculo_form.non_field_errors }}
+        </div>
+      {% endif %}
+      {{ vehiculo_form.as_p }}
+    </div>
+
+    <hr>
+
+    <!-- ---------------- DIAGNÓSTICO ---------------- -->
+    <h3>Diagnóstico</h3>
+    {% if diagnostico_form.non_field_errors %}
+      <div class="alert alert-danger">{{ diagnostico_form.non_field_errors }}</div>
+    {% endif %}
+    {{ diagnostico_form.as_p }}
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'panel_principal' %}"             class="btn btn-sm btn-warning">Regresar</a>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // CLIENTE: ocultar campos si se selecciona cliente existente
+  const clienteSelect = document.getElementById('cliente_existente');
+  const nuevoClienteCampos = document.getElementById('nuevo_cliente_campos');
+  function toggleClienteCampos() {
+    if (clienteSelect.value) {
+      nuevoClienteCampos.style.display = 'none';
+    } else {
+      nuevoClienteCampos.style.display = 'block';
+    }
+  }
+  clienteSelect.addEventListener('change', toggleClienteCampos);
+  toggleClienteCampos(); // inicializa
+
+  // VEHÍCULO: ocultar campos si se selecciona vehículo existente
+  const vehiculoSelect = document.getElementById('vehiculo_select');
+  const vehiculoFields = document.getElementById('vehiculo_fields');
+  function toggleVehiculoCampos() {
+    if (vehiculoSelect.value) {
+      vehiculoFields.style.display = 'none';
+    } else {
+      vehiculoFields.style.display = 'block';
+    }
+  }
+  vehiculoSelect.addEventListener('change', toggleVehiculoCampos);
+  toggleVehiculoCampos(); // inicializa
+});
+</script>
+{% endblock %}
