@@ -291,7 +291,7 @@ def mostrar_plano(request):
     svg_content = svg_path.read_text(encoding='utf-8')
     return render(request, 'car/plano_interactivo.html', {'svg': svg_content})
 
-def componentes_lookup(request):
+def componentes_lookup2(request):
     part = request.GET.get('part')
     if not part:
         return JsonResponse({'error': 'missing part'}, status=400)
@@ -310,6 +310,93 @@ def componentes_lookup(request):
     hijos = list(comp.hijos.values('id','nombre','codigo'))
     parent = {'id': comp.id, 'nombre': comp.nombre, 'codigo': comp.codigo}
     return JsonResponse({'found': True, 'parent': parent, 'children': hijos})
+
+
+def componentes_lookup3(request):
+    part = request.GET.get('part')
+    if not part:
+        return JsonResponse({'error': 'missing part'}, status=400)
+
+    try:
+        comp = Componente.objects.get(codigo=part)
+    except Componente.DoesNotExist:
+        comp = Componente.objects.filter(nombre__iexact=part).first()
+
+    if not comp:
+        return JsonResponse({'found': False})
+
+    hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
+
+    # Si tienes un campo imagen en el modelo
+    if hasattr(comp, 'imagen') and comp.imagen:
+        imagen_url = comp.imagen.url
+    else:
+        # Si quieres deducirlo por el código
+        imagen_url = f"{settings.STATIC_URL}images/{comp.codigo}.svg"
+        print( "si hay imagen ",imagen_url)
+    parent = {
+        'id': comp.id,
+        'nombre': comp.nombre,
+        'codigo': comp.codigo,
+        'imagen_url': imagen_url
+    }
+
+    print("parent ",parent)
+    return JsonResponse({
+        'found': True,
+        'parent': parent,
+        'children': hijos
+    })
+
+# views.py (fragmento)
+from django.conf import settings
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.http import JsonResponse
+
+def componentes_lookup(request):
+    part = (request.GET.get('part') or '').strip()
+    if not part:
+        return JsonResponse({'error': 'missing part'}, status=400)
+
+    # normaliza búsqueda
+    part_norm = part.lower()
+
+    # evita ids tipo 'g8' (capas de inkscape)
+    import re
+    if re.match(r'^g\d+$', part_norm):
+        return JsonResponse({'found': False})
+
+    try:
+        comp = Componente.objects.get(codigo__iexact=part_norm)
+    except Componente.DoesNotExist:
+        comp = Componente.objects.filter(nombre__iexact=part_norm).first()
+
+    if not comp:
+        return JsonResponse({'found': False})
+
+    hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
+
+    # construir URL de imagen de forma segura
+    if hasattr(comp, 'imagen') and comp.imagen:
+        imagen_url = comp.imagen.url
+    else:
+        # si usas staticfiles: usa staticfiles_storage para resolver URL
+        try:
+            imagen_url = staticfiles_storage.url(f'images/{comp.codigo}.svg')
+        except Exception:
+            imagen_url = settings.STATIC_URL + f'images/{comp.codigo}.svg'
+
+    parent = {
+        'id': comp.id,
+        'nombre': comp.nombre,
+        'codigo': comp.codigo,
+        'imagen_url': imagen_url
+    }
+
+    return JsonResponse({'found': True, 'parent': parent, 'children': hijos})
+
+
+
 
 def seleccionar_componente(request, codigo):
     try:

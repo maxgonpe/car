@@ -1,5 +1,3 @@
-{# plano_interactivo.html #}
-
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
@@ -7,12 +5,20 @@
     {{ svg|safe }}
   </div>
 
+  <!-- Panel para mostrar información de la parte seleccionada -->
   <div id="part-info" class="card mt-3" style="display:none;">
     <div class="card-body">
-      <h5 id="part-name"></h5>
-      <ul id="part-children"></ul>
+      <h5 id="part-name" class="mb-2"></h5>
+      <ul id="part-children" class="list-unstyled"></ul>
     </div>
   </div>
 
+  <!-- Script de interactividad -->
+  <script>
+    // Datos opcionales que podríamos pasar desde Django
+    const partsData = {{ parts_data|safe }};
+  </script>
+
   <script src="{% static 'js/plano-interactivo.js' %}"></script>
 {% endblock %}
+
