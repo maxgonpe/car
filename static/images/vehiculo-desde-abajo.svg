@@ -69,14 +69,14 @@
        y="563.75781" />
     <rect
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="rueda-delantera"
+       id="rueda-delantera-izquierda"
        width="35.253155"
        height="105.85068"
        x="29.226608"
        y="83.682976" />
     <rect
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="rueda-trasera"
+       id="rueda-trasera-derecha"
        width="35.761501"
        height="103.66286"
        x="276.55859"

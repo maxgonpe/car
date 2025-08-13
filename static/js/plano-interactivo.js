@@ -1,30 +1,54 @@
 // static/js/plano-interactivo.js
 document.addEventListener("DOMContentLoaded", function () {
-  // helper: ignora ids tipo g8, layer de inkscape
   const ignoreIdRegex = /^g\d+$/i;
 
-  // subrayado visual (clase CSS o estilos inline)
   function highlight(el) {
     try {
       el.style.outline = "3px solid rgba(255,0,0,0.25)";
       el.style.outlineOffset = "2px";
     } catch (e) {}
   }
+
   function unhighlight(el) {
     try {
       el.style.outline = "none";
     } catch (e) {}
   }
 
-  // manejador único de click que elige el candidato correcto
+  function attachListenersToSvg(svgRoot) {
+    if (!svgRoot) return;
+
+    const zonas = svgRoot.querySelectorAll("[id]");
+    zonas.forEach(z => {
+      if (!z.id || ignoreIdRegex.test(z.id)) return;
+
+      z.removeEventListener("click", handleClickOnce);
+      z.addEventListener("click", handleClickOnce, { passive: false });
+
+      z.addEventListener("mouseenter", function () {
+        z.style.cursor = "pointer";
+        z.style.stroke = "red";
+        z.style.strokeWidth = "2";
+      });
+
+      z.addEventListener("mouseleave", function () {
+        z.style.stroke = "none";
+      });
+    });
+  }
+
   function handleClickOnce(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    // obtener la pila de elementos bajo el puntero (top -> bottom)
-    const elems = document.elementsFromPoint(e.clientX, e.clientY);
+    let elems;
+    if (e.view && e.view.document) {
+      // Si el evento viene de un <object> SVG, usar su document
+      elems = e.view.document.elementsFromPoint(e.clientX, e.clientY);
+    } else {
+      elems = document.elementsFromPoint(e.clientX, e.clientY);
+    }
 
-    // elegir el primer elemento con id válido y que no sea "gNN"
     let candidate = null;
     for (const el of elems) {
       if (el.id && !ignoreIdRegex.test(el.id)) {
@@ -32,39 +56,48 @@ document.addEventListener("DOMContentLoaded", function () {
         break;
       }
     }
+
     if (!candidate) {
-      // nada válido encontrado
       console.debug("No se encontró elemento con id válido en el punto.");
       return;
     }
 
-    const idComponente = candidate.id;
-    // visual feedback
-    highlight(candidate);
-    setTimeout(() => unhighlight(candidate), 900);
+    const idOriginal = candidate.id.trim();
+    let idComponente = idOriginal.replace(/-\d+$/, "").toLowerCase();
 
-    // construir URL absoluta por si acaso
-    const fetchUrl = new URL(`/car/componentes-lookup/`, window.location.origin);
-    fetchUrl.searchParams.set("part", idComponente);
+    console.log("🔍 ID detectado:", idOriginal);
 
-    fetch(fetchUrl.toString(), { credentials: "same-origin" })
+    // ✅ Definir URL de búsqueda correctamente
+    const fetchUrl = `/car/componentes-lookup/?part=${idComponente}`;
+    console.log("📡 Consultando:", fetchUrl);
+
+    fetch(fetchUrl, { credentials: "same-origin" })
       .then(res => {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
       })
       .then(data => {
         if (data.found) {
-          // muestra en un panel en vez de alert si quieres (aquí uso alert para simplicidad)
           if (data.children && data.children.length > 0) {
             alert(`✅ Componente: ${data.parent.nombre}\nHijos: ${data.children.map(c => c.nombre).join(", ")}`);
-            // si hay imagen asociada, cargarla (URL absoluta)
-            if (data.parent.imagen_url) {
-              const imageUrl = new URL(data.parent.imagen_url, window.location.origin).toString();
-              document.getElementById("plano-container").innerHTML =
-                `<object type="image/svg+xml" data="${imageUrl}" class="w-100" aria-label="Detalle ${data.parent.nombre}"></object>`;
-            }
           } else {
             alert(`✅ Componente: ${data.parent.nombre}\n(No tiene hijos)`);
+          }
+
+          if (data.parent.imagen_url) {
+            const imageUrl = new URL(data.parent.imagen_url, window.location.origin).toString();
+            const container = document.getElementById("plano-container");
+            container.innerHTML = `<object type="image/svg+xml" id="svg-detail" data="${imageUrl}" class="w-100"></object>`;
+
+            // 🔹 Esperar a que el nuevo SVG cargue para añadirle listeners
+            const obj = document.getElementById("svg-detail");
+            obj.addEventListener("load", () => {
+              const innerDoc = obj.contentDocument;
+              if (innerDoc) {
+                const innerSvg = innerDoc.querySelector("svg");
+                attachListenersToSvg(innerSvg);
+              }
+            });
           }
         } else {
           alert("❌ Componente no encontrado");
@@ -75,27 +108,9 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
-  // en lugar de añadir un listener a *cada* elemento, podemos
-  // delegar en el <svg> padre. Así solo hay un listener y no se duplica.
-  // Pero aquí mantengo attach por si ya tienes listener por elemento:
-  const zonas = document.querySelectorAll("svg [id]");
-  zonas.forEach(z => {
-    // remover posibles listeners duplicados (evita ghost handlers)
-    z.removeEventListener("click", handleClickOnce);
-    z.addEventListener("click", handleClickOnce, { passive: false });
-    z.addEventListener("mouseenter", function () {
-      z.style.cursor = "pointer";
-      z.style.stroke = "red";
-      z.style.strokeWidth = "2";
-    });
-    z.addEventListener("mouseleave", function () {
-      z.style.stroke = "none";
-    });
-  });
-
-  // adicional: delegación sobre el contenedor (opcional)
-  // const svgContainer = document.getElementById('plano-container');
-  // svgContainer && svgContainer.addEventListener('click', handleClickOnce);
+  // Inicializar sobre el SVG principal en el DOM
+  const mainSvg = document.querySelector("svg");
+  attachListenersToSvg(mainSvg);
 });
 
 

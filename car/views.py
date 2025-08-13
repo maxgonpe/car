@@ -348,10 +348,6 @@ def componentes_lookup3(request):
         'children': hijos
     })
 
-# views.py (fragmento)
-from django.conf import settings
-from django.contrib.staticfiles.storage import staticfiles_storage
-from django.http import JsonResponse
 
 def componentes_lookup(request):
     part = (request.GET.get('part') or '').strip()
@@ -402,7 +398,7 @@ def seleccionar_componente(request, codigo):
     try:
         comp = Componente.objects.get(codigo=codigo)
     except Componente.DoesNotExist:
-        raise Http404("Componente no encontrado")
+        raise Http404("Componente nox encontrado")
 
     hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
     return JsonResponse({
