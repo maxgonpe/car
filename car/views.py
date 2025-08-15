@@ -40,7 +40,242 @@ def componente_list(request):
         'q': q,
     })
 
+
 def ingreso_view(request):
+    clientes_existentes = Cliente.objects.all().order_by('nombre')
+    vehiculos_existentes = Vehiculo.objects.all().order_by('placa')
+
+    selected_cliente = None
+    selected_vehiculo = None
+    selected_componentes_ids = []
+
+    if request.method == 'POST':
+        cliente_form = ClienteForm(request.POST, prefix='cliente')
+        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
+
+        cliente_id = request.POST.get('cliente_existente')
+        vehiculo_id = request.POST.get('vehiculo_existente')
+        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
+
+        # --- Cliente ---
+        cliente = None
+        if cliente_id:
+            try:
+                cliente = Cliente.objects.get(pk=cliente_id)
+                selected_cliente = cliente.pk
+            except Cliente.DoesNotExist:
+                cliente_form.add_error(None, "El cliente seleccionado no existe.")
+        else:
+            if cliente_form.is_valid():
+                cliente = cliente_form.save()
+                selected_cliente = cliente.pk
+
+        # --- Vehículo ---
+        vehiculo = None
+        if vehiculo_id:
+            try:
+                vehiculo = Vehiculo.objects.get(pk=vehiculo_id)
+                selected_vehiculo = vehiculo.pk
+            except Vehiculo.DoesNotExist:
+                vehiculo_form.add_error(None, "El vehículo seleccionado no existe.")
+        else:
+            if vehiculo_form.is_valid() and cliente:
+                vehiculo = vehiculo_form.save(commit=False)
+                vehiculo.cliente = cliente
+                vehiculo.save()
+                selected_vehiculo = vehiculo.pk
+
+        # --- Diagnóstico ---
+        if diagnostico_form.is_valid() and vehiculo:
+            diagnostico = diagnostico_form.save(commit=False)
+            diagnostico.vehiculo = vehiculo
+            diagnostico.save()
+
+            # asignar componentes seleccionados al ManyToMany
+            diagnostico.componentes.set(selected_componentes_ids)
+
+            messages.success(request, "Ingreso guardado correctamente.")
+            return redirect('panel_principal')
+        else:
+            print("fallo el formulario ")
+
+    else:
+        cliente_form = ClienteForm(prefix='cliente')
+        vehiculo_form = VehiculoForm(prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(prefix='diag')
+
+    return render(request, 'car/ingreso.html', {
+        'cliente_form': cliente_form,
+        'vehiculo_form': vehiculo_form,
+        'diagnostico_form': diagnostico_form,
+        'clientes_existentes': clientes_existentes,
+        'vehiculos_existentes': vehiculos_existentes,
+        'selected_cliente': selected_cliente,
+        'selected_vehiculo': selected_vehiculo,
+        # solo los componentes raíz (los que no tienen padre)
+        'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
+        'selected_componentes_ids': selected_componentes_ids,
+    })
+
+
+
+def ingreso_view5(request):
+    clientes_existentes = Cliente.objects.all().order_by('nombre')
+    vehiculos_existentes = Vehiculo.objects.all().order_by('placa')
+
+
+    selected_cliente = None
+    selected_vehiculo = None
+    selected_componentes_ids = []
+
+    if request.method == 'POST':
+        cliente_form = ClienteForm(request.POST, prefix='cliente')
+        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
+
+        cliente_id = request.POST.get('cliente_existente')
+        vehiculo_id = request.POST.get('vehiculo_existente')
+
+        # Guardamos los IDs seleccionados en POST
+        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
+
+        # --- Cliente ---
+        if cliente_id:
+            try:
+                cliente = Cliente.objects.get(pk=cliente_id)
+                selected_cliente = cliente.pk
+            except Cliente.DoesNotExist:
+                cliente_form.add_error(None, "El cliente seleccionado no existe.")
+        else:
+            if cliente_form.is_valid():
+                cliente = cliente_form.save()
+                selected_cliente = cliente.pk
+
+        # --- Vehículo ---
+        if vehiculo_id:
+            try:
+                vehiculo = Vehiculo.objects.get(pk=vehiculo_id)
+                selected_vehiculo = vehiculo.pk
+            except Vehiculo.DoesNotExist:
+                vehiculo_form.add_error(None, "El vehículo seleccionado no existe.")
+        else:
+            if vehiculo_form.is_valid() and selected_cliente:
+                vehiculo = vehiculo_form.save(commit=False)
+                vehiculo.cliente = Cliente.objects.get(pk=selected_cliente)
+                vehiculo.save()
+                selected_vehiculo = vehiculo.pk
+
+        # --- Diagnóstico ---
+        if diagnostico_form.is_valid() and selected_vehiculo:
+            diagnostico = diagnostico_form.save(commit=False)
+            diagnostico.vehiculo_id = selected_vehiculo
+            diagnostico.save()
+            diagnostico.componentes.set(selected_componentes_ids)
+            messages.success(request, "Ingreso guardado correctamente.")
+            return redirect('panel_principal')
+
+    else:
+        cliente_form = ClienteForm(prefix='cliente')
+        vehiculo_form = VehiculoForm(prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(prefix='diag')
+
+    return render(request, 'car/ingreso.html', {
+        'cliente_form': cliente_form,
+        'vehiculo_form': vehiculo_form,
+        'diagnostico_form': diagnostico_form,
+        'clientes_existentes': clientes_existentes,
+        'vehiculos_existentes': vehiculos_existentes,
+        'selected_cliente': selected_cliente,
+        'selected_vehiculo': selected_vehiculo,
+        'componentes': Componente.objects.all(),
+        'selected_componentes_ids': selected_componentes_ids,
+    })
+
+
+def ingreso_view4(request):
+    # listas para los selects
+    clientes_existentes = Cliente.objects.all().order_by('nombre')
+    vehiculos_existentes = Vehiculo.objects.all().order_by('placa')
+
+    selected_cliente = None
+    selected_vehiculo = None
+
+    # Cargar todos los componentes raíz (los hijos se incluyen en el template recursivamente)
+    componentes = Componente.objects.filter(padre__isnull=True).prefetch_related('hijos')
+
+    if request.method == 'POST':
+        cliente_form = ClienteForm(request.POST, prefix='cliente')
+        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
+
+        cliente_id = request.POST.get('cliente_existente')
+        vehiculo_id = request.POST.get('vehiculo_existente')
+
+        # --- Cliente ---
+        cliente = None
+        if cliente_id:
+            try:
+                cliente = Cliente.objects.get(pk=cliente_id)
+                selected_cliente = cliente.pk
+            except Cliente.DoesNotExist:
+                cliente_form.add_error(None, "El cliente seleccionado no existe.")
+        else:
+            if cliente_form.is_valid():
+                cliente = cliente_form.save()
+                selected_cliente = cliente.pk
+
+        # --- Vehículo ---
+        vehiculo = None
+        if vehiculo_id:
+            try:
+                vehiculo = Vehiculo.objects.get(pk=vehiculo_id)
+                selected_vehiculo = vehiculo.pk
+            except Vehiculo.DoesNotExist:
+                vehiculo_form.add_error(None, "El vehículo seleccionado no existe.")
+        else:
+            if vehiculo_form.is_valid() and cliente:
+                vehiculo = vehiculo_form.save(commit=False)
+                vehiculo.cliente = cliente
+                vehiculo.save()
+                selected_vehiculo = vehiculo.pk
+
+        # --- Diagnóstico ---
+        if diagnostico_form.is_valid() and vehiculo:
+            diagnostico = diagnostico_form.save(commit=False)
+            diagnostico.vehiculo = vehiculo
+            diagnostico.save()
+
+            # Guardar componentes seleccionados desde los checkboxes
+            selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
+            diagnostico.componentes.set(selected_componentes_ids)
+
+            messages.success(request, "Ingreso guardado correctamente.")
+            return redirect('panel_principal')
+
+    else:
+        cliente_form = ClienteForm(prefix='cliente')
+        vehiculo_form = VehiculoForm(prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(prefix='diag')
+
+    return render(request, 'car/ingreso.html', {
+        'cliente_form': cliente_form,
+        'vehiculo_form': vehiculo_form,
+        'diagnostico_form': diagnostico_form,
+        'clientes_existentes': clientes_existentes,
+        'vehiculos_existentes': vehiculos_existentes,
+        'selected_cliente': selected_cliente,
+        'selected_vehiculo': selected_vehiculo,
+        'componentes': componentes,  # 👈 Aquí pasamos los componentes para el acordeón
+    })
+
+
+
+
+
+
+
+def ingreso_view3(request):
     # listas para los selects
     clientes_existentes = Cliente.objects.all().order_by('nombre')
     vehiculos_existentes = Vehiculo.objects.all().order_by('placa')  # o .order_by('marca')

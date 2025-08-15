@@ -1,0 +1,19 @@
+<ul class="list-group">
+  {% for componente in componentes %}
+    <li class="list-group-item">
+      <details>
+        <summary>
+          <label>
+            <input type="checkbox" name="componentes_seleccionados" value="{{ componente.id }}"
+              {% if componente.id|stringformat:"s" in selected_componentes_ids %}checked{% endif %}>
+            {{ componente.nombre }}
+          </label>
+        </summary>
+
+        {% if componente.hijos.all %}
+          {% include 'car/componentes_acordeon.html' with componentes=componente.hijos.all selected_componentes_ids=selected_componentes_ids %}
+        {% endif %}
+      </details>
+    </li>
+  {% endfor %}
+</ul>

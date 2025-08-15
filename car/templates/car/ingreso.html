@@ -65,10 +65,14 @@
     <h3>Diagnóstico</h3>
 
     <div class="mb-3">
-      <label class="form-label">Seleccionar uno o más componentes:</label>
-      {{ diagnostico_form.componentes }}
-    </div>
+    <label class="form-label">Seleccionar uno o más componentes:</label>
+    
 
+    {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+
+  </div>
+
+    
     <div class="mb-3">
       <label class="form-label">Descripción del problema:</label>
       {{ diagnostico_form.descripcion_problema }}
