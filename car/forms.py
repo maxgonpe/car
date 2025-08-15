@@ -13,11 +13,18 @@ class VehiculoForm(forms.ModelForm):
         model = Vehiculo
         fields = ['marca', 'modelo', 'anio', 'vin', 'placa', 'descripcion_motor']
 
+#class DiagnosticoForm2(forms.ModelForm):
+#    class Meta:
+#        model = Diagnostico
+#        fields = ['componente', 'descripcion_problema']
+
 class DiagnosticoForm(forms.ModelForm):
     class Meta:
         model = Diagnostico
-        fields = ['componente', 'descripcion_problema']
-
+        fields = ['componentes', 'descripcion_problema']  # eliminamos 'vehiculo' porque se asigna en la vista
+        widgets = {
+            'componentes': forms.CheckboxSelectMultiple,  # o SelectMultiple si prefieres lista desplegable
+        }
 
 
 class ComponenteForm(forms.ModelForm):

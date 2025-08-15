@@ -96,7 +96,8 @@ class Componente(models.Model):
 
 class Diagnostico(models.Model):
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE)
-    componente = models.ForeignKey(Componente, on_delete=models.PROTECT, related_name='diagnosticos')
+    #componente = models.ForeignKey(Componente, on_delete=models.PROTECT, related_name='diagnosticos')
+    componentes = models.ManyToManyField(Componente, related_name='diagnosticos')
     descripcion_problema = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
     subcomponentes_sugeridos = models.JSONField(blank=True, null=True)

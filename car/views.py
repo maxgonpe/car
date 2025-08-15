@@ -99,6 +99,7 @@ def ingreso_view(request):
             diagnostico = diagnostico_form.save(commit=False)
             diagnostico.vehiculo = vehiculo
             diagnostico.save()
+            diagnostico_form.save_m2m()
 
             messages.success(request, "Ingreso guardado correctamente.")
             return redirect('panel_principal')  # ajusta URL a tu nombre real
@@ -398,7 +399,7 @@ def seleccionar_componente(request, codigo):
     try:
         comp = Componente.objects.get(codigo=codigo)
     except Componente.DoesNotExist:
-        raise Http404("Componente nox encontrado")
+        raise Http404("Componente no encontrado")
 
     hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
     return JsonResponse({

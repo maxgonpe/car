@@ -13,8 +13,24 @@ class ClienteAdmin(admin.ModelAdmin):
 class ComponenteAdmin(admin.ModelAdmin):
     list_display = ('id','nombre', 'padre','activo')
 
+class DiagnosticoAdmin2(admin.ModelAdmin):
+    list_display = ('id','vehiculo', 'descripcion_problema','subcomponentes_sugeridos')
+
 class DiagnosticoAdmin(admin.ModelAdmin):
-    list_display = ('id','vehiculo', 'componente','descripcion_problema','subcomponentes_sugeridos')
+    list_display = (
+        'id',
+        'vehiculo',
+        'descripcion_problema',
+        'listar_componentes',
+        'subcomponentes_sugeridos',
+    )
+
+    #def listar_componentes(self, obj):
+    #    return ", ".join([c.nombre for c in obj.componentes.all()])
+    #listar_componentes.short_description = "Componentes"
+
+    def listar_componentes(self, obj):
+        return ", ".join([c.nombre for c in obj.componentes.order_by('padre__nombre', 'nombre')])
 
 
 admin.site.register(Cliente,ClienteAdmin)
