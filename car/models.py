@@ -25,11 +25,14 @@ class Vehiculo(models.Model):
     def __str__(self):
         return self.cliente.nombre
 
-    def __str__(self):
-        # Acceder al anio
-        return f"{self.marca} {self.modelo} {self.anio}"
+    #def __str__(self):
+    #    # Acceder al anio
+    #    return f"{self.marca} {self.modelo} {self.anio}"
 
     
+    def __str__(self):
+        return f"{self.placa} • {self.marca} {self.modelo} ({self.anio})"
+
 
     
 

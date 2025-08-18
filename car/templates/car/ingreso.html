@@ -23,7 +23,6 @@
     </div>
 
     <div id="nuevo_cliente_campos">
-      {# Muestra errores generales del form #}
       {% if cliente_form.non_field_errors %}
         <div class="alert alert-danger">
           {{ cliente_form.non_field_errors }}
@@ -39,8 +38,14 @@
 
     <div class="mb-3">
       <label class="form-label">Seleccionar vehículo existente:</label>
-      <select id="vehiculo_select" name="vehiculo_existente" class="form-select">
+      <select
+        id="vehiculo_select"
+        name="vehiculo_existente"
+        class="form-select"
+        data-selected="{{ selected_vehiculo|default:'' }}"
+      >
         <option value="">-- Nuevo vehículo --</option>
+        {# El JS poblará este select al elegir cliente #}
         {% for veh in vehiculos_existentes %}
           <option value="{{ veh.id }}"
             {% if selected_vehiculo and selected_vehiculo|stringformat:"s" == veh.id|stringformat:"s" %} selected {% endif %}>
@@ -65,52 +70,90 @@
     <h3>Diagnóstico</h3>
 
     <div class="mb-3">
-    <label class="form-label">Seleccionar uno o más componentes:</label>
-    
+      <label class="form-label">Seleccionar uno o más componentes:</label>
+      {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+    </div>
 
-    {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
-
-  </div>
-
-    
     <div class="mb-3">
       <label class="form-label">Descripción del problema:</label>
       {{ diagnostico_form.descripcion_problema }}
     </div>
 
-
     <button type="submit" class="btn btn-primary">Guardar</button>
-    <a href="{% url 'panel_principal' %}"             class="btn btn-sm btn-warning">Regresar</a>
+    <a href="{% url 'panel_principal' %}" class="btn btn-sm btn-warning">Regresar</a>
   </form>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // CLIENTE: ocultar campos si se selecciona cliente existente
-  const clienteSelect = document.getElementById('cliente_existente');
+  const clienteSelect  = document.getElementById('cliente_existente');
   const nuevoClienteCampos = document.getElementById('nuevo_cliente_campos');
-  function toggleClienteCampos() {
-    if (clienteSelect.value) {
-      nuevoClienteCampos.style.display = 'none';
-    } else {
-      nuevoClienteCampos.style.display = 'block';
-    }
-  }
-  clienteSelect.addEventListener('change', toggleClienteCampos);
-  toggleClienteCampos(); // inicializa
 
-  // VEHÍCULO: ocultar campos si se selecciona vehículo existente
   const vehiculoSelect = document.getElementById('vehiculo_select');
   const vehiculoFields = document.getElementById('vehiculo_fields');
+
+  function toggleClienteCampos() {
+    nuevoClienteCampos.style.display = clienteSelect.value ? 'none' : 'block';
+  }
+
   function toggleVehiculoCampos() {
-    if (vehiculoSelect.value) {
-      vehiculoFields.style.display = 'none';
-    } else {
-      vehiculoFields.style.display = 'block';
+    // Si hay vehículo elegido => oculto campos de "nuevo vehículo"
+    // Si NO hay vehículo (valor vacío) => muestro campos para crear uno
+    vehiculoFields.style.display = vehiculoSelect.value ? 'none' : 'block';
+  }
+
+  async function loadVehiculos(clienteId, selectedVehiculoId = null) {
+    // Dejar placeholder
+    vehiculoSelect.innerHTML = '<option value="">-- Nuevo vehículo --</option>';
+
+    if (!clienteId) {
+      toggleVehiculoCampos();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/vehiculos/${clienteId}/`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await res.json();
+
+      data.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = `${v.placa} • ${v.marca} ${v.modelo} (${v.anio})`;
+        if (selectedVehiculoId && String(v.id) === String(selectedVehiculoId)) {
+          opt.selected = true;
+        }
+        vehiculoSelect.appendChild(opt);
+      });
+
+      toggleVehiculoCampos();
+    } catch (err) {
+      console.error('Error cargando vehículos:', err);
     }
   }
+
+  // Eventos
+  clienteSelect.addEventListener('change', () => {
+    toggleClienteCampos();
+    // recargar lista de vehículos según el cliente
+    loadVehiculos(clienteSelect.value);
+    // al cambiar cliente, limpia selección de vehículo (si la había)
+    vehiculoSelect.value = '';
+    toggleVehiculoCampos();
+  });
+
   vehiculoSelect.addEventListener('change', toggleVehiculoCampos);
-  toggleVehiculoCampos(); // inicializa
+
+  // Inicialización
+  toggleClienteCampos();
+  toggleVehiculoCampos();
+
+  // Si ya hay un cliente seleccionado (p. ej. tras POST con errores),
+  // poblamos su lista de vehículos y re-seleccionamos el que venía.
+  const preSelectedVehiculoId = vehiculoSelect.dataset.selected || '';
+  if (clienteSelect.value) {
+    loadVehiculos(clienteSelect.value, preSelectedVehiculoId);
+  }
 });
 </script>
 {% endblock %}

@@ -1,3 +1,4 @@
 __pycache__/
+settings_local.py
 git rm -r --cached env
 git rm --cached db.sqlite3
