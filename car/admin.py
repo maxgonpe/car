@@ -23,6 +23,7 @@ class DiagnosticoAdmin(admin.ModelAdmin):
         'descripcion_problema',
         'listar_componentes',
         'subcomponentes_sugeridos',
+        'fecha',
     )
 
     #def listar_componentes(self, obj):
