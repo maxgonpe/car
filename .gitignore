@@ -1,4 +1,6 @@
+db.sqlite3
 __pycache__/
+*.pyc
+car/migrations/__pycache__/
 settings_local.py
-git rm -r --cached env
-git rm --cached db.sqlite3
+

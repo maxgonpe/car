@@ -20,11 +20,17 @@ class DiagnosticoAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'vehiculo',
+        'nombre_cliente',
         'descripcion_problema',
         'listar_componentes',
         'subcomponentes_sugeridos',
         'fecha',
     )
+
+    def nombre_cliente(self, obj):
+        return obj.vehiculo.cliente.nombre  # Acceder al nombre del cliente
+
+    nombre_cliente.short_description = 'Cliente'
 
     #def listar_componentes(self, obj):
     #    return ", ".join([c.nombre for c in obj.componentes.all()])
