@@ -61,6 +61,10 @@ ROOT_URLCONF = 'myproject.urls'
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'  # Especifica el template pack a usar
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 1b328a0 (Conservando cambios en settings.py y db.sqlite3)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
