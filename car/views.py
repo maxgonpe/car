@@ -8,14 +8,20 @@ from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.templatetags.static import static
 from django.template.loader import render_to_string
+from django.conf import settings
+from django.contrib.staticfiles.storage import staticfiles_storage
 from .models import Presupuesto, RepuestoRecomendado,\
 					Diagnostico, Cliente, Vehiculo,\
                     Componente
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
                    DiagnosticoForm
 
+
+import re
 import pathlib
+import os
 
 
 
@@ -108,6 +114,17 @@ def ingreso_view(request):
     # Deja el select vacío y que el JS lo cargue según el cliente.
     vehiculos_existentes = Vehiculo.objects.none()
 
+    
+    # cargar motor.svg como string
+    svg_path = os.path.join(settings.BASE_DIR, "static", "images", "vehiculo-desde-abajo.svg")
+    svg_content = ""
+    try:
+        with open(svg_path, "r", encoding="utf-8") as f:
+            svg_content = f.read()
+    except FileNotFoundError:
+        pass
+
+
     return render(request, 'car/ingreso.html', {
         'cliente_form': cliente_form,
         'vehiculo_form': vehiculo_form,
@@ -118,157 +135,10 @@ def ingreso_view(request):
         'selected_vehiculo': selected_vehiculo,
         'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
         'selected_componentes_ids': selected_componentes_ids,
+        'svg': svg_content,
     })
 
 
-def ingreso_view1(request):
-    clientes_existentes = Cliente.objects.all().order_by('nombre')
-    vehiculos_existentes = Vehiculo.objects.all().order_by('placa')
-
-    selected_cliente = None
-    selected_vehiculo = None
-    selected_componentes_ids = []
-
-    if request.method == 'POST':
-        cliente_form = ClienteForm(request.POST, prefix='cliente')
-        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
-
-        cliente_id = request.POST.get('cliente_existente')
-        vehiculo_id = request.POST.get('vehiculo_existente')
-        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
-
-        # --- Cliente ---
-        cliente = None
-        if cliente_id:
-            try:
-                cliente = Cliente.objects.get(pk=cliente_id)
-                selected_cliente = cliente.pk
-            except Cliente.DoesNotExist:
-                cliente_form.add_error(None, "El cliente seleccionado no existe.")
-        else:
-            if cliente_form.is_valid():
-                cliente = cliente_form.save()
-                selected_cliente = cliente.pk
-
-        # --- Vehículo ---
-        vehiculo = None
-        if vehiculo_id:
-            try:
-                vehiculo = Vehiculo.objects.get(pk=vehiculo_id)
-                selected_vehiculo = vehiculo.pk
-            except Vehiculo.DoesNotExist:
-                vehiculo_form.add_error(None, "El vehículo seleccionado no existe.")
-        else:
-            if vehiculo_form.is_valid() and cliente:
-                vehiculo = vehiculo_form.save(commit=False)
-                vehiculo.cliente = cliente
-                vehiculo.save()
-                selected_vehiculo = vehiculo.pk
-
-        # --- Diagnóstico ---
-        if diagnostico_form.is_valid() and vehiculo:
-            diagnostico = diagnostico_form.save(commit=False)
-            diagnostico.vehiculo = vehiculo
-            diagnostico.save()
-
-            # asignar componentes seleccionados al ManyToMany
-            diagnostico.componentes.set(selected_componentes_ids)
-
-            messages.success(request, "Ingreso guardado correctamente.")
-            return redirect('panel_principal')
-        else:
-            print("fallo el formulario ")
-
-    else:
-        cliente_form = ClienteForm(prefix='cliente')
-        vehiculo_form = VehiculoForm(prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(prefix='diag')
-
-    return render(request, 'car/ingreso.html', {
-        'cliente_form': cliente_form,
-        'vehiculo_form': vehiculo_form,
-        'diagnostico_form': diagnostico_form,
-        'clientes_existentes': clientes_existentes,
-        'vehiculos_existentes': vehiculos_existentes,
-        'selected_cliente': selected_cliente,
-        'selected_vehiculo': selected_vehiculo,
-        # solo los componentes raíz (los que no tienen padre)
-        'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
-        'selected_componentes_ids': selected_componentes_ids,
-    })
-
-
-def ingreso_view2(request):
-    clientes_existentes = Cliente.objects.all().order_by('nombre')
-    selected_cliente = None
-    selected_vehiculo = None
-    selected_componentes_ids = []
-
-    if request.method == 'POST':
-        cliente_form = ClienteForm(request.POST, prefix='cliente')
-        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
-
-        cliente_id = request.POST.get('cliente_existente')
-        vehiculo_id = request.POST.get('vehiculo_existente')
-        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
-
-        cliente = None
-        if cliente_id:
-            try:
-                cliente = Cliente.objects.get(pk=cliente_id)
-                selected_cliente = cliente.pk
-            except Cliente.DoesNotExist:
-                cliente_form.add_error(None, "El cliente seleccionado no existe.")
-        else:
-            if cliente_form.is_valid():
-                cliente = cliente_form.save()
-                selected_cliente = cliente.pk
-
-        vehiculo = None
-        if vehiculo_id:
-            try:
-                vehiculo = Vehiculo.objects.get(pk=vehiculo_id, cliente=cliente)
-                selected_vehiculo = vehiculo.pk
-            except Vehiculo.DoesNotExist:
-                vehiculo_form.add_error(None, "El vehículo seleccionado no existe o no pertenece al cliente.")
-        else:
-            if vehiculo_form.is_valid() and cliente:
-                vehiculo = vehiculo_form.save(commit=False)
-                vehiculo.cliente = cliente
-                vehiculo.save()
-                selected_vehiculo = vehiculo.pk
-
-        if diagnostico_form.is_valid() and vehiculo:
-            diagnostico = diagnostico_form.save(commit=False)
-            diagnostico.vehiculo = vehiculo
-            diagnostico.save()
-            diagnostico.componentes.set(selected_componentes_ids)
-            messages.success(request, "Ingreso guardado correctamente.")
-            return redirect('panel_principal')
-        else:
-            print("fallo el formulario ")
-
-    else:
-        cliente_form = ClienteForm(prefix='cliente')
-        vehiculo_form = VehiculoForm(prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(prefix='diag')
-
-    # 👇 aquí aplicamos el filtro
-    vehiculos_existentes = Vehiculo.objects.filter(cliente_id=selected_cliente).order_by('placa') if selected_cliente else Vehiculo.objects.none()
-
-    return render(request, 'car/ingreso.html', {
-        'cliente_form': cliente_form,
-        'vehiculo_form': vehiculo_form,
-        'diagnostico_form': diagnostico_form,
-        'clientes_existentes': clientes_existentes,
-        'vehiculos_existentes': vehiculos_existentes,
-        'selected_cliente': selected_cliente,
-        'selected_vehiculo': selected_vehiculo,
-        'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
-        'selected_componentes_ids': selected_componentes_ids,
-    })
 
 
 def ingreso_exitoso_view(request):
@@ -353,12 +223,10 @@ def componentes_lookup(request):
     if not part:
         return JsonResponse({'error': 'missing part'}, status=400)
 
-    # normaliza búsqueda
     part_norm = part.lower()
 
-    # evita ids tipo 'g8' (capas de inkscape)
     import re
-    if re.match(r'^g\d+$', part_norm):
+    if re.match(r'^(g\d+|svg\d+)$', part_norm):
         return JsonResponse({'found': False})
 
     try:
@@ -371,15 +239,22 @@ def componentes_lookup(request):
 
     hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
 
-    # construir URL de imagen de forma segura
-    if hasattr(comp, 'imagen') and comp.imagen:
-        imagen_url = comp.imagen.url
-    else:
-        # si usas staticfiles: usa staticfiles_storage para resolver URL
+    # 🔹 buscar imagen en este componente o en su cadena de padres
+    imagen_url = None
+    current = comp
+    while current and not imagen_url:
         try:
-            imagen_url = staticfiles_storage.url(f'images/{comp.codigo}.svg')
+            if hasattr(current, 'imagen') and current.imagen:
+                imagen_url = current.imagen.url
+            else:
+                imagen_url = staticfiles_storage.url(f'images/{current.codigo}.svg')
         except Exception:
-            imagen_url = settings.STATIC_URL + f'images/{comp.codigo}.svg'
+            imagen_url = settings.STATIC_URL + f'images/{current.codigo}.svg'
+
+        # si tampoco existe, subir al padre
+        if not current.padre_id:  
+            break
+        current = current.padre
 
     parent = {
         'id': comp.id,
@@ -391,11 +266,16 @@ def componentes_lookup(request):
     return JsonResponse({'found': True, 'parent': parent, 'children': hijos})
 
 
+
+
+
+
+
 def seleccionar_componente(request, codigo):
     try:
         comp = Componente.objects.get(codigo=codigo)
     except Componente.DoesNotExist:
-        raise Http404("Componente no encontrado")
+        raise Http404("Componente nox encontrado")
 
     hijos = list(comp.hijos.values('id', 'nombre', 'codigo'))
     return JsonResponse({
@@ -405,9 +285,6 @@ def seleccionar_componente(request, codigo):
         'hijos': hijos
     })
 
-#def get_vehiculos_por_cliente(request, cliente_id):
-#    vehiculos = Vehiculo.objects.filter(cliente_id=cliente_id).values('id', 'placa', 'marca', 'modelo', 'anio')
-#    return JsonResponse(list(vehiculos), safe=False)
 
 def get_vehiculos_por_cliente(request, cliente_id):
     vehiculos = Vehiculo.objects.filter(cliente_id=cliente_id).order_by('placa')

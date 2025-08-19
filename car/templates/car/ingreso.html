@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 {% block content %}
+
 <div class="container py-4">
   <h2>Ingreso de Diagnóstico</h2>
 
@@ -9,7 +11,6 @@
 
     <!-- ---------------- CLIENTE ---------------- -->
     <h3>Cliente</h3>
-
     <div class="mb-3">
       <label class="form-label">Elegir cliente existente:</label>
       <select id="cliente_existente" name="cliente_existente" class="form-select">
@@ -22,60 +23,56 @@
         {% endfor %}
       </select>
     </div>
-
     <div id="nuevo_cliente_campos">
-      {% if cliente_form.non_field_errors %}
-        <div class="alert alert-danger">
-          {{ cliente_form.non_field_errors }}
-        </div>
-      {% endif %}
       {{ cliente_form|crispy }}
     </div>
-
     <hr>
 
     <!-- ---------------- VEHÍCULO ---------------- -->
     <h3>Vehículo</h3>
-
     <div class="mb-3">
       <label class="form-label">Seleccionar vehículo existente:</label>
-      <select
-        id="vehiculo_select"
-        name="vehiculo_existente"
-        class="form-select"
-        data-selected="{{ selected_vehiculo|default:'' }}"
-      >
+      <select id="vehiculo_select" name="vehiculo_existente" class="form-select" data-selected="{{ selected_vehiculo|default:'' }}">
         <option value="">-- Nuevo vehículo --</option>
-        {# El JS poblará este select al elegir cliente #}
-        {% for veh in vehiculos_existentes %}
-          <option value="{{ veh.id }}"
-            {% if selected_vehiculo and selected_vehiculo|stringformat:"s" == veh.id|stringformat:"s" %} selected {% endif %}>
-            {{ veh.placa }} • {{ veh.marca }} {{ veh.modelo }} ({{ veh.anio }})
-          </option>
-        {% endfor %}
       </select>
     </div>
-
     <div id="vehiculo_fields">
-      {% if vehiculo_form.non_field_errors %}
-        <div class="alert alert-danger">
-          {{ vehiculo_form.non_field_errors }}
-        </div>
-      {% endif %}
       {{ vehiculo_form|crispy }}
     </div>
-
     <hr>
 
     <!-- ---------------- DIAGNÓSTICO ---------------- -->
     <h3>Diagnóstico</h3>
+    <div class="row">
+      <!-- Columna izquierda: acordeón -->
+      <div class="col-md-6 border-end">
+        <h5>Seleccionar por lista</h5>
+        {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+      </div>
 
-    <div class="mb-3">
-      <label class="form-label">Seleccionar uno o más componentes:</label>
-      {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+      <!-- Columna derecha: plano SVG -->
+      <div class="col-md-6">
+        <h5>Seleccionar en el plano</h5>
+        <button id="btn-reset-plano" type="button" class="btn btn-sm btn-outline-secondary mb-2">
+          ⬅️ Volver al plano inicial
+        </button>
+        <div id="plano-container" 
+             style="border:1px solid #ccc; max-height:100%; overflow:auto;"
+             data-inicial-url="{% static 'images/vehiculo-desde-abajo.svg' %}">
+          <div style="transform:scale(0.9); transform-origin: top left;">
+            {{ svg|safe }}
+          </div>
+        </div>
+
+        <!-- 🔽 Lista de componentes elegidos -->
+        <div id="componentes-seleccionados" class="mt-3">
+          <h6>Componentes seleccionados:</h6>
+          <ul id="lista-seleccionados" class="list-group small"></ul>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
+    <div class="mt-3">
       <label class="form-label">Descripción del problema:</label>
       {{ diagnostico_form|crispy }}
     </div>
@@ -87,74 +84,93 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // ---------------- CLIENTE ----------------
   const clienteSelect  = document.getElementById('cliente_existente');
   const nuevoClienteCampos = document.getElementById('nuevo_cliente_campos');
 
+  function toggleClienteCampos() {
+    if (!nuevoClienteCampos) return;
+    nuevoClienteCampos.style.display = clienteSelect && clienteSelect.value ? 'none' : 'block';
+  }
+
+  // ---------------- VEHÍCULO ----------------
   const vehiculoSelect = document.getElementById('vehiculo_select');
   const vehiculoFields = document.getElementById('vehiculo_fields');
 
-  function toggleClienteCampos() {
-    nuevoClienteCampos.style.display = clienteSelect.value ? 'none' : 'block';
-  }
-
   function toggleVehiculoCampos() {
-    // Si hay vehículo elegido => oculto campos de "nuevo vehículo"
-    // Si NO hay vehículo (valor vacío) => muestro campos para crear uno
     vehiculoFields.style.display = vehiculoSelect.value ? 'none' : 'block';
   }
 
-  async function loadVehiculos(clienteId, selectedVehiculoId = null) {
-    // Dejar placeholder
+  async function cargarVehiculos(clienteId, selectedVehiculoId = null) {
     vehiculoSelect.innerHTML = '<option value="">-- Nuevo vehículo --</option>';
+    if (!clienteId) { toggleVehiculoCampos(); return; }
+    const res = await fetch(`/api/vehiculos/${clienteId}/`);
+    const data = await res.json();
+    data.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.textContent = `${v.placa} • ${v.marca} ${v.modelo} (${v.anio})`;
+      if (selectedVehiculoId && String(v.id) === String(selectedVehiculoId)) {
+        opt.selected = true;
+      }
+      vehiculoSelect.appendChild(opt);
+    });
+    toggleVehiculoCampos();
+  }
 
-    if (!clienteId) {
+  // Eventos cliente
+  if (clienteSelect) {
+    clienteSelect.addEventListener('change', () => {
+      toggleClienteCampos();
+      cargarVehiculos(clienteSelect.value);
+      vehiculoSelect.value = '';
       toggleVehiculoCampos();
-      return;
-    }
-    try {
-      const res = await fetch(`/api/vehiculos/${clienteId}/`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
-      const data = await res.json();
+    });
+    toggleClienteCampos();
+  }
 
-      data.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = `${v.placa} • ${v.marca} ${v.modelo} (${v.anio})`;
-        if (selectedVehiculoId && String(v.id) === String(selectedVehiculoId)) {
-          opt.selected = true;
-        }
-        vehiculoSelect.appendChild(opt);
-      });
-
+  // Eventos vehículo
+  if (vehiculoSelect) {
+    vehiculoSelect.addEventListener('change', toggleVehiculoCampos);
+    if (clienteSelect && clienteSelect.value) {
+      cargarVehiculos(clienteSelect.value, vehiculoSelect.dataset.selected);
+    } else {
       toggleVehiculoCampos();
-    } catch (err) {
-      console.error('Error cargando vehículos:', err);
     }
   }
 
-  // Eventos
-  clienteSelect.addEventListener('change', () => {
-    toggleClienteCampos();
-    // recargar lista de vehículos según el cliente
-    loadVehiculos(clienteSelect.value);
-    // al cambiar cliente, limpia selección de vehículo (si la había)
-    vehiculoSelect.value = '';
-    toggleVehiculoCampos();
+  // ---------------- COMPONENTES SELECCIONADOS ----------------
+  const listaSeleccionados = document.getElementById("lista-seleccionados");
+
+  function actualizarListaSeleccionados() {
+    listaSeleccionados.innerHTML = "";
+    document.querySelectorAll('input[name="componentes_seleccionados"]:checked').forEach(cb => {
+      const li = document.createElement("li");
+      li.className = "list-group-item py-1";
+      li.textContent = cb.dataset.nombre || `ID ${cb.value}`;
+      listaSeleccionados.appendChild(li);
+    });
+  }
+
+  // Escuchar cambios en acordeón
+  document.querySelectorAll('input[name="componentes_seleccionados"]').forEach(cb => {
+    cb.addEventListener("change", actualizarListaSeleccionados);
+  });
+  actualizarListaSeleccionados();
+
+  // ---------------- BOTÓN RESET PLANO ----------------
+  const btnResetPlano = document.getElementById("btn-reset-plano");
+  btnResetPlano?.addEventListener("click", () => {
+    const cont = document.getElementById("plano-container");
+    const url = cont.dataset.inicialUrl;
+    cont.innerHTML = `<object type="image/svg+xml" data="${url}" class="w-100"></object>`;
   });
 
-  vehiculoSelect.addEventListener('change', toggleVehiculoCampos);
+  
 
-  // Inicialización
-  toggleClienteCampos();
-  toggleVehiculoCampos();
 
-  // Si ya hay un cliente seleccionado (p. ej. tras POST con errores),
-  // poblamos su lista de vehículos y re-seleccionamos el que venía.
-  const preSelectedVehiculoId = vehiculoSelect.dataset.selected || '';
-  if (clienteSelect.value) {
-    loadVehiculos(clienteSelect.value, preSelectedVehiculoId);
-  }
+  
 });
 </script>
+
 {% endblock %}
