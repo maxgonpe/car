@@ -1,18 +1,127 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block content %}
-<div class="container py-3">
-  <h3 class="mb-3">🔧 Panel Principal</h3>
 
-  <div class="d-grid mb-3">
-    <a href="{% url 'ingreso' %}" class="btn btn-success btn-lg">+ Nuevo Ingreso</a>
+<div class="container py-4">
 
-    <a href="{% url 'componente_list' %}" class="btn btn-outline-dark btn-lg">🧩 Administrar Componentes</a>
-
-    <a href="{% url 'plano_interactivo' %}" class="btn btn-primary btn-lg">🛠️ Plano Interactivo</a>
+  <!-- Encabezado -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">👋 Hola, {{ user.username }}</h2>
+    <form method="post" action="">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
+    </form>
   </div>
 
   
 
+  <!-- Panel principal -->
+  <div class="row g-3">
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{% url 'componente_list' %}" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">⚙️</div>
+          <h6 class="mt-2"><strong>Componentes</strong></h6>
+          <h6>partes del vehiculo</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">🛠️</div>
+          <h6 class="mt-2">Herramientas</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">👨‍🔧</div>
+          <h6 class="mt-2">Mecánicos</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">⚙️</div>
+          <h6 class="mt-2">Repuestos</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="{% url 'ingreso' %}" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">📝</div>
+          <h6 class="mt-2">Diagnósticos</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">📋</div>
+          <h6 class="mt-2">Pre-Ingreso</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">🏠</div>
+          <h6 class="mt-2">Espacio</h6>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+      <a href="#" class="card text-center shadow-sm h-100 link-card">
+        <div class="card-body d-flex flex-column justify-content-center">
+          <div class="display-6">➕</div>
+          <h6 class="mt-2">Otros</h6>
+        </div>
+      </a>
+    </div>
+
+  </div>
 </div>
+
+
+
+<style>
+/* Estilo para las tarjetas de botones */
+.link-card {
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.link-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Modo oscuro */
+.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+.dark-mode .card {
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+}
+.dark-mode h2, 
+.dark-mode h6 {
+  color: #e0e0e0;
+}
+</style>
+
 {% endblock %}
