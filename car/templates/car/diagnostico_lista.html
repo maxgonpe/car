@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Diagnosticos</h2>
+
+<a href="" class="btn  btn-success mb-3">Descargar Excel</a>
+    <a href="" class="btn btn-danger mb-3">Descargar PDF</a>
+
+
+<input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar producto por nombre, categoria, precio...">
+
+{% for diagnostico in diagnosticos %}
+<div class="card mb-2">
+    <div class="card-body">
+        <strong>Vehiculo:</strong> {{ diagnostico.vehiculo }}<br>
+        <strong>Cliente:</strong> {{ diagnostico.vehiculo.cliente.nombre }}<br>
+        <strong>Telefono:</strong> {{ diagnostico.vehiculo.cliente.telefono }}<br>
+        <strong>Diagnostico:</strong> {{ diagnostico.descripcion_problema }}<br>
+        <strong>Partes Afectadas:</strong> 
+            {% for comp in diagnostico.componentes.all %}
+                {{ comp.nombre }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+                Ninguno
+            {% endfor %}
+            <br>
+
+        <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
+
+        <a href="" class="btn btn-sm btn-secondary mt-2">Editar</a>
+        <a href="" class="btn btn-sm btn-danger mt-2">Eliminar</a>
+        <a href="" class="btn btn-sm btn-warning">Regresar</a>
+    </div>
+</div>
+{% empty %}
+<p>No hay productos registrados.</p>
+{% endfor %}
+
+<a href="" class="btn btn-sm btn-warning">Regresar</a>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterInput = document.getElementById('filterInput');
+    const cards = document.querySelectorAll('.card');
+
+    filterInput.addEventListener('keyup', function () {
+        const filterValue = filterInput.value.toLowerCase();
+
+        cards.forEach(function (card) {
+            const text = card.textContent.toLowerCase();
+            if (text.includes(filterValue)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

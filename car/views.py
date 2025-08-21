@@ -299,3 +299,8 @@ def get_vehiculos_por_cliente(request, cliente_id):
         for v in vehiculos
     ]
     return JsonResponse(data, safe=False)
+
+
+def lista_diagnosticos(request):
+    diagnosticos = Diagnostico.objects.all().order_by('-fecha')
+    return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})

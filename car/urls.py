@@ -16,6 +16,7 @@ urlpatterns = [
     path('componentes-lookup/', views.componentes_lookup, name='componentes_lookup'),
     path('componentes/seleccionar/<str:codigo>/', views.seleccionar_componente, name='seleccionar_componente'),
     path('plano/', views.mostrar_plano, name='plano_interactivo'),
+    path('diagnosticos/', views.lista_diagnosticos, name='lista_diagnosticos'),
 
 ]   
 
