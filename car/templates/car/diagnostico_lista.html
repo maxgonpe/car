@@ -6,7 +6,7 @@
     <a href="" class="btn btn-danger mb-3">Descargar PDF</a>
 
 
-<input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar producto por nombre, categoria, precio...">
+<input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar por vehiculo, cliente, telefono, diagnostico, partes...">
 
 {% for diagnostico in diagnosticos %}
 <div class="card mb-2">
@@ -26,8 +26,8 @@
         <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
 
         <a href="" class="btn btn-sm btn-secondary mt-2">Editar</a>
-        <a href="" class="btn btn-sm btn-danger mt-2">Eliminar</a>
-        <a href="" class="btn btn-sm btn-warning">Regresar</a>
+        <a href="{% url 'eliminar_diagnostico' diagnostico.pk %}" class="btn btn-sm btn-danger mt-2">Eliminar</a>
+        <a href="{% url 'panel_principal' %}" class="btn btn-sm btn-warning">Regresar</a>
     </div>
 </div>
 {% empty %}

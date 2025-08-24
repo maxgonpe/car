@@ -47,7 +47,41 @@
       <!-- Columna izquierda: acordeón -->
       <div class="col-md-6 border-end">
         <h5>Seleccionar por lista</h5>
-        {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+
+        <div class="accordion" id="componentesAccordion">
+          {% for padre in componentes %}
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="heading-{{ padre.id }}">
+                <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapse-{{ padre.id }}"
+                        aria-expanded="false" aria-controls="collapse-{{ padre.id }}">
+                  {{ padre.nombre }}
+                </button>
+              </h2>
+              <div id="collapse-{{ padre.id }}" class="accordion-collapse collapse"
+                   aria-labelledby="heading-{{ padre.id }}" data-bs-parent="#componentesAccordion">
+                <div class="accordion-body">
+                  {% for hijo in padre.hijos.all %}
+                    <div class="form-check">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             name="componentes_seleccionados"
+                             value="{{ hijo.id }}"
+                             id="comp-{{ hijo.id }}"
+                             data-nombre="{{ hijo.nombre }}"
+                             {% if hijo.id in selected_componentes_ids %}checked{% endif %}>
+                      <label class="form-check-label" for="comp-{{ hijo.id }}">
+                        {{ hijo.nombre }}
+                      </label>
+                    </div>
+                  {% empty %}
+                    <p class="text-muted small">No hay subcomponentes registrados.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
       </div>
 
       <!-- Columna derecha: plano SVG -->
@@ -140,23 +174,98 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ---------------- COMPONENTES SELECCIONADOS ----------------
-  const listaSeleccionados = document.getElementById("lista-seleccionados");
+  const lista = document.getElementById("lista-seleccionados");
 
-  function actualizarListaSeleccionados() {
-    listaSeleccionados.innerHTML = "";
-    document.querySelectorAll('input[name="componentes_seleccionados"]:checked').forEach(cb => {
+  function agregarALista(compId, compNombre, codigoSvg = null) {
+    if (!document.getElementById(`comp-li-${compId}`)) {
       const li = document.createElement("li");
-      li.className = "list-group-item py-1";
-      li.textContent = cb.dataset.nombre || `ID ${cb.value}`;
-      listaSeleccionados.appendChild(li);
-    });
+      li.id = `comp-li-${compId}`;
+      li.className = "list-group-item d-flex justify-content-between align-items-center";
+      li.textContent = compNombre;
+
+      // Botón de quitar
+      const btnRemove = document.createElement("button");
+      btnRemove.className = "btn btn-sm btn-outline-danger ms-2";
+      btnRemove.textContent = "✕";
+      btnRemove.addEventListener("click", () => {
+        const cb = document.querySelector(
+          `input[name="componentes_seleccionados"][value="${compId}"]`
+        );
+        if (cb) cb.checked = false;
+        if (codigoSvg) {
+          const elSvg = document.getElementById(codigoSvg);
+          if (elSvg) elSvg.style.fill = "";
+        }
+        li.remove();
+      });
+
+      li.appendChild(btnRemove);
+      lista.appendChild(li);
+    }
+  }
+
+  function quitarDeLista(compId) {
+    const li = document.getElementById(`comp-li-${compId}`);
+    if (li) li.remove();
   }
 
   // Escuchar cambios en acordeón
+  function actualizarListaSeleccionados() {
+    lista.innerHTML = "";
+    document.querySelectorAll('input[name="componentes_seleccionados"]:checked').forEach(cb => {
+      const nombre = cb.dataset.nombre || cb.value;
+      agregarALista(cb.value, nombre);
+    });
+  }
+
   document.querySelectorAll('input[name="componentes_seleccionados"]').forEach(cb => {
     cb.addEventListener("change", actualizarListaSeleccionados);
   });
   actualizarListaSeleccionados();
+
+  // ---------------- INTERACTIVIDAD CON EL SVG ----------------
+  document.querySelectorAll('#plano-container [id]').forEach(el => {
+    el.style.cursor = "pointer";
+    el.addEventListener('click', () => {
+      const codigo = el.id;
+      fetch(`/car/componentes-lookup/?part=${codigo}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.found) {
+            const compId = data.parent.id;
+            const compNombre = data.parent.nombre;
+
+            // checkbox oculto
+            let cb = document.querySelector(
+              `input[name="componentes_seleccionados"][value="${compId}"]`
+            );
+            if (!cb) {
+              cb = document.createElement("input");
+              cb.type = "checkbox";
+              cb.name = "componentes_seleccionados";
+              cb.value = compId;
+              cb.id = `hidden-comp-${compId}`;
+              cb.checked = true;
+              cb.dataset.nombre = compNombre;
+              cb.style.display = "none";
+              document.forms[0].appendChild(cb);
+            } else {
+              cb.checked = !cb.checked;
+            }
+
+            // marcar visual
+            el.style.fill = cb.checked ? "orange" : "";
+
+            // lista
+            if (cb.checked) {
+              agregarALista(compId, compNombre, codigo);
+            } else {
+              quitarDeLista(compId);
+            }
+          }
+        });
+    });
+  });
 
   // ---------------- BOTÓN RESET PLANO ----------------
   const btnResetPlano = document.getElementById("btn-reset-plano");
@@ -166,10 +275,6 @@ document.addEventListener('DOMContentLoaded', function () {
     cont.innerHTML = `<object type="image/svg+xml" data="${url}" class="w-100"></object>`;
   });
 
-  
-
-
-  
 });
 </script>
 

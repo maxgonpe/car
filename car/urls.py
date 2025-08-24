@@ -17,6 +17,7 @@ urlpatterns = [
     path('componentes/seleccionar/<str:codigo>/', views.seleccionar_componente, name='seleccionar_componente'),
     path('plano/', views.mostrar_plano, name='plano_interactivo'),
     path('diagnosticos/', views.lista_diagnosticos, name='lista_diagnosticos'),
+    path('eliminar/diagnosticos/', views.eliminar_diagnostico, name='eliminar_diagnostico'),
 
 ]   
 

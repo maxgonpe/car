@@ -304,3 +304,12 @@ def get_vehiculos_por_cliente(request, cliente_id):
 def lista_diagnosticos(request):
     diagnosticos = Diagnostico.objects.all().order_by('-fecha')
     return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})
+
+def eliminar_diagnostico(request, pk):
+    diagnostico = get_object_or_404(Diagnostico, pk=pk)
+    if request.method == 'POST':
+
+        diagnostico.delete()
+        
+        return redirect('lista_diagnosticos')
+    return render(request, 'car/diagnostico_eliminar.html', {'diagnostico': diagnostico})
