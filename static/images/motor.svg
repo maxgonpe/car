@@ -27,10 +27,10 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="2.5186676"
-     inkscape:cx="257.67592"
-     inkscape:cy="97.869205"
-     inkscape:window-width="1280"
-     inkscape:window-height="664"
+     inkscape:cx="96.876618"
+     inkscape:cy="383.73464"
+     inkscape:window-width="1024"
+     inkscape:window-height="712"
      inkscape:window-x="0"
      inkscape:window-y="27"
      inkscape:window-maximized="1"
@@ -70,11 +70,17 @@
        ry="8.7253141" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path846"
+       id="cuatro"
        cx="98.696983"
        cy="256.99612"
        rx="6.686049"
-       ry="6.6775794" />
+       ry="6.6775794"
+       inkscape:label="cuatro">
+      <desc
+         id="desc873">cuatro</desc>
+      <title
+         id="title871">cuatro</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
        id="cinco"
@@ -91,14 +97,14 @@
        ry="8.7429733" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path854"
+       id="siete"
        cx="117.98346"
        cy="268.29742"
        rx="7.4481621"
        ry="8.1884956" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path856"
+       id="ocho"
        cx="89.006737"
        cy="320.14001"
        rx="7.0940318"
@@ -112,25 +118,43 @@
        ry="9.2655125" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path860"
+       id="diez"
        cx="157.37383"
        cy="400.44684"
        rx="9.1585655"
-       ry="9.1157999" />
+       ry="9.1157999"
+       inkscape:label="diez">
+      <desc
+         id="desc999">diez</desc>
+      <title
+         id="title997">deiz</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path862"
+       id="once"
        cx="28.998133"
        cy="360.73206"
        rx="10.66084"
-       ry="8.6362267" />
+       ry="8.6362267"
+       inkscape:label="once">
+      <desc
+         id="desc955">once</desc>
+      <title
+         id="title953">once</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path866"
+       id="doce"
        cx="119.18352"
        cy="456.73038"
        rx="9.7522831"
-       ry="8.0125818" />
+       ry="8.0125818"
+       inkscape:label="doce">
+      <desc
+         id="desc913">doce</desc>
+      <title
+         id="title911">doce</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
        id="trece"

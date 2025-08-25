@@ -38,7 +38,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const li = document.createElement("li");
     li.id = `li-comp-${id}`;
     li.className = "list-group-item d-flex justify-content-between align-items-center";
-    li.textContent = nombre;
+    //li.textContent = nombre;
+    li.innerHTML = `<span>${nombre}</span> <span class="text-success">✔</span>`;
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -106,45 +107,43 @@ document.addEventListener("DOMContentLoaded", function () {
           alert("❌ Componente no encontrado");
           return;
         }
-
+        // trozo a sacar
         if (data.children && data.children.length > 0) {
-          // Tiene hijos → mostrar detalle si quieres
-        } else {
-          // ✅ Seleccionable
-          const confirmAdd = confirm(`✅ Componente: ${data.parent.nombre}\n¿Desea agregarlo al diagnóstico?`);
-
-          if (confirmAdd) {
-            const checkbox = document.querySelector(
-              `input[name="componentes_seleccionados"][value="${data.parent.id}"]`
-            );
-            if (checkbox) {
-              checkbox.checked = true;
-              checkbox.dispatchEvent(new Event("change"));
-              console.log(`✔️ Marcado en acordeón: ${data.parent.nombre} (id=${data.parent.id})`);
-
-              // 🔽 también agregar a la lista textual
-              addToListaSeleccionados(data.parent.id, data.parent.nombre);
-            } else {
-              console.warn(`⚠️ No encontré checkbox para id ${data.parent.id}`);
-            }
-          }
+  // Tiene hijos → navegación: SOLO aquí se cambia la imagen
+  if (data.parent && data.parent.imagen_url) {
+    const imageUrl = new URL(data.parent.imagen_url, window.location.origin).toString();
+    const obj = document.getElementById("svg-detail");
+    const currentUrl = obj ? obj.getAttribute("data") : null;
+    if (imageUrl && imageUrl !== currentUrl) {
+      const container = document.getElementById("plano-container");
+      container.innerHTML = `<object type="image/svg+xml" id="svg-detail" data="${imageUrl}" class="w-100"></object>`;
+      const newObj = document.getElementById("svg-detail");
+      newObj.addEventListener("load", () => {
+        const innerDoc = newObj.contentDocument;
+        if (innerDoc) {
+          const innerSvg = innerDoc.querySelector("svg");
+          attachListenersToSvg(innerSvg);
         }
+      });
+    }
+  }
+} else {
+  // ✅ Seleccionable (leaf) → NO cambiar imagen
+  const confirmAdd = confirm(`✅ Componente: ${data.parent.nombre}\n¿Desea agregarlo al diagnóstico?`);
+  if (confirmAdd) {
+    const checkbox = document.querySelector(
+      `input[name="componentes_seleccionados"][value="${data.parent.id}"]`
+    );
+    if (checkbox) {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event("change"));
+      addToListaSeleccionados(data.parent.id, data.parent.nombre);
+    
+    }
+  }
+}
 
-        // Mostrar imagen asociada si existe
-        if (data.parent.imagen_url) {
-          const imageUrl = new URL(data.parent.imagen_url, window.location.origin).toString();
-          const container = document.getElementById("plano-container");
-          container.innerHTML = `<object type="image/svg+xml" id="svg-detail" data="${imageUrl}" class="w-100"></object>`;
-
-          const obj = document.getElementById("svg-detail");
-          obj.addEventListener("load", () => {
-            const innerDoc = obj.contentDocument;
-            if (innerDoc) {
-              const innerSvg = innerDoc.querySelector("svg");
-              attachListenersToSvg(innerSvg);
-            }
-          });
-        }
+        // hasta aqui trozo a sacar
       })
       .catch(err => {
         console.error("Error buscando componente:", err);
