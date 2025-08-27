@@ -92,60 +92,20 @@
 
 <body class="d-flex flex-column min-vh-100">
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3 shadow-sm">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="{% url 'panel_principal' %}">🚗 CAR</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#carNavbar" aria-controls="carNavbar" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+  <nav class="navbar navbar-light bg-light app-navbar border-bottom">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-semibold" href="/">Taller Mecánico</a>
+      <div class="d-flex gap-2">
+        
 
-    <div class="collapse navbar-collapse" id="carNavbar">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'ingreso' %}">Ingresar diagnóstico</a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'lista_diagnosticos' %}">Diagnósticos</a>
-        </li>
-
-        <!-- Usa namespace si adoptaste la Opción A -->
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'accion_list' %}">Acciones</a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'comp_accion_list' %}">Componente + Acción</a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'componente_list' %}">Componentes</a>
-        </li>
-
-      </ul>
-
-      <ul class="navbar-nav ms-auto">
-        {% if user.is_authenticated %}
-          <li class="nav-item">
-            <span class="navbar-text me-2">Hola, {{ user.username }}</span>
-          </li>
-          <li class="nav-item">
-            <form method="post" action="">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
-            </form>
-          </li>
-        {% else %}
-          <li class="nav-item">
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'login' %}">Iniciar sesión</a>
-          </li>
-        {% endif %}
-      </ul>
+        
+        <!-- Botón de modo oscuro -->
+        <button id="toggle-dark" type="button" class="btn btn-sm btn-outline-secondary">
+          🌙 Modo oscuro
+        </button>
+      </div>
     </div>
-  </div>
-</nav>
-
+  </nav>
 
   <!-- Contenido -->
   <main class="flex-grow-1">

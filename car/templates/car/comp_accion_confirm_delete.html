@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Eliminar precio</h2>
+<div class="card">
+  <div class="card-body">
+    <p>¿Eliminar el precio para <strong>{{ obj.componente.nombre }}</strong> — <strong>{{ obj.accion.nombre }}</strong>?</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Eliminar</button>
+      <a href="{% url 'comp_accion_list' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

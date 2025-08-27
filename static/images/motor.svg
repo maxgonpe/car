@@ -49,230 +49,381 @@
        y="7.2919183" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="uno"
+       id="flauta"
        cx="132.16206"
        cy="144.25522"
        rx="9.904521"
-       ry="10.306439" />
+       ry="10.306439"
+       inkscape:label="flauta">
+      <desc
+         id="flauta">flauta</desc>
+      <title
+         id="flauta">flauta</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="dos"
+       id="camara"
        cx="147.69504"
        cy="182.60286"
        rx="8.1762829"
-       ry="8.5562639" />
+       ry="8.5562639"
+       inkscape:label="camara">
+      <desc
+         id="camara">camara</desc>
+      <title
+         id="camara">camara</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="tres"
+       id="valvulas"
        cx="147.14539"
        cy="233.51361"
        rx="7.8322206"
-       ry="8.7253141" />
+       ry="8.7253141"
+       inkscape:label="valvulas">
+      <desc
+         id="valvulas">valvulas</desc>
+      <title
+         id="valvulas">valvulas</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="cuatro"
+       id="bujias"
        cx="98.696983"
        cy="256.99612"
        rx="6.686049"
        ry="6.6775794"
-       inkscape:label="cuatro">
+       inkscape:label="bujias">
       <desc
-         id="desc873">cuatro</desc>
+         id="bujias">bujias</desc>
       <title
-         id="title871">cuatro</title>
+         id="bujias">bujias</title>
     </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="cinco"
+       id="bloque"
        cx="146.78032"
        cy="264.38049"
        rx="9.1144133"
-       ry="8.1004505" />
+       ry="8.1004505"
+       inkscape:label="bloque">
+      <desc
+         id="bloque">bloque</desc>
+      <title
+         id="bloque">bloque</title>
+    </ellipse> 
+
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="seis"
+       id="distribuidor"
        cx="39.940525"
        cy="286.17426"
        rx="7.8139853"
-       ry="8.7429733" />
+       ry="8.7429733"
+       inkscape:label="distribuidor">
+      <desc
+         id="distribuidor">distriubidor</desc>
+      <title
+         id="distribuidor">distribuidor</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="siete"
+       id="palillos"
        cx="117.98346"
        cy="268.29742"
        rx="7.4481621"
-       ry="8.1884956" />
+       ry="8.1884956"
+       inkscape:label="palillos">
+      <desc
+         id="palillos">palillos</desc>
+      <title
+         id="palillos">palillos</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="ocho"
+       id="bomba de gasolina"
        cx="89.006737"
        cy="320.14001"
        rx="7.0940318"
-       ry="7.9325032" />
+       ry="7.9325032"
+       inkscape:label="bomba de gasolina">
+      <desc
+         id="bomba de gasolina">bomba de gasolina</desc>
+      <title
+         id="bomba de gasolina">bomba de gasolina</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="nueve"
+       id="taquetes"
        cx="108.14019"
        cy="359.93668"
        rx="8.0943928"
-       ry="9.2655125" />
+       ry="9.2655125"
+       inkscape:label="taquetes">
+      <desc
+         id="taquetes">taquetes</desc>
+      <title
+         id="taquetes">taquetes</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="diez"
+       id="arbol de levas"
        cx="157.37383"
        cy="400.44684"
        rx="9.1585655"
        ry="9.1157999"
-       inkscape:label="diez">
+       inkscape:label="arbol de levas">
       <desc
-         id="desc999">diez</desc>
+         id="desc999">arbol de levas</desc>
       <title
-         id="title997">deiz</title>
+         id="title997">arbol de levas</title>
     </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="once"
+       id="tapa cadena"
        cx="28.998133"
        cy="360.73206"
        rx="10.66084"
        ry="8.6362267"
-       inkscape:label="once">
+       inkscape:label="tapa cadena">
       <desc
-         id="desc955">once</desc>
+         id="tapa cadena">tapa cadena</desc>
       <title
-         id="title953">once</title>
+         id="tapa cadena">tapa cadena</title>
     </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="doce"
+       id="correa de distribucion"
        cx="119.18352"
        cy="456.73038"
        rx="9.7522831"
        ry="8.0125818"
-       inkscape:label="doce">
+       inkscape:label="correa de distribucion">
       <desc
-         id="desc913">doce</desc>
+         id="correa de distribucion">correa de distribucion</desc>
       <title
-         id="title911">doce</title>
+         id="correa de distribucion">correa de distribucion</title>
     </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="trece"
+       id="bomba aceite"
        cx="23.211023"
        cy="482.34515"
        rx="10.290582"
-       ry="8.9679117" />
+       ry="8.9679117"
+       inkscape:label="bomba aceite">
+      <desc
+         id="bomba aceite">bomba aceite</desc>
+      <title
+         id="bomba aceite">bomba aceite</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="catorce"
+       id="filtro bomba aceite"
        cx="183.73705"
        cy="502.04596"
        rx="11.871378"
-       ry="8.151001" />
+       ry="8.151001"
+       inkscape:label="filtro bomba aceite">
+      <desc
+         id="filtro bomba aceite">filtro bomba aceite</desc>
+      <title
+         id="filtro bomba aceite">filtro bomba aceite</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="quince"
+       id="carter"
        cx="275.21552"
        cy="501.60782"
        rx="9.3307114"
-       ry="6.8118978" />
+       ry="6.8118978"
+       inkscape:label="arbol de levas">
+      <desc
+         id="carter">cartel</desc>
+      <title
+         id="carter">carter</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="dieciseis"
+       id="empacadura de carter"
        cx="301.3327"
        cy="496.91577"
        rx="9.2899332"
-       ry="8.2567606" />
+       ry="8.2567606"
+       inkscape:label="empacadura de carter">
+      <desc
+         id="empacadura de carter">empacadura de carter</desc>
+      <title
+         id="empacadura de carter">empacadura de carter</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="diecisiete"
+       id="cigueñal"
        cx="330.82355"
        cy="460.71362"
        rx="9.2429819"
-       ry="9.1694822" />
+       ry="9.1694822"
+       inkscape:label="cigueñal">
+      <desc
+         id="cigueñal">cigueñal</desc>
+      <title
+         id="cigueñal">cigueñal</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="dieciocho"
+       id="volante"
        cx="356.08957"
        cy="457.7402"
        rx="9.5744181"
-       ry="8.5338478" />
+       ry="8.5338478"
+       inkscape:label="volante">
+      <desc
+         id="volante">volante</desc>
+      <title
+         id="volante">volante</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="diecinueve"
+       id="cremallera"
        cx="394.5896"
        cy="353.24994"
        rx="9.4662294"
-       ry="9.1060953" />
+       ry="9.1060953"
+       inkscape:label="cremallera">
+      <desc
+         id="cremallera">cremallera</desc>
+      <title
+         id="cremallera">cremallera</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veinte"
+       id="biela"
        cx="382.38959"
        cy="334.98138"
        rx="9.3798628"
-       ry="7.5781302" />
+       ry="7.5781302"
+       inkscape:label="biela">
+      <desc
+         id="biela">biela</desc>
+      <title
+         id="biela">biela</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintiuno"
+       id="pasador piston"
        cx="356.061"
        cy="327.38733"
        rx="9.067728"
-       ry="7.0987511" />
+       ry="7.0987511"
+       inkscape:label="pasador piston">
+      <desc
+         id="pasador piston">pasador piston</desc>
+      <title
+         id="pasador piston">pasador piston</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintidos"
+       id="piston"
        cx="375.38242"
        cy="314.17465"
        rx="9.6272821"
-       ry="8.459486" />
+       ry="8.459486" 
+       inkscape:label="piston">
+      <desc
+         id="piston">piston</desc>
+      <title
+         id="piston">piston</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintitres"
+       id="anillos"
        cx="388.27109"
        cy="255.79509"
        rx="9.8439264"
-       ry="8.1997643" />
+       ry="8.1997643"
+       inkscape:label="anillos">
+      <desc
+         id="anillos">anillos</desc>
+      <title
+         id="anillos">anillos</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veinticuatro"
+       id="camisa"
        cx="355.57098"
        cy="235.68298"
        rx="10.325583"
-       ry="9.293726" />
+       ry="9.293726"
+       inkscape:label="camisa">
+      <desc
+         id="camisa">camisa</desc>
+      <title
+         id="camisa">camisa</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veinticinco"
+       id="empacadura camara"
        cx="357.43805"
        cy="212.49049"
        rx="10.267921"
-       ry="8.392972" />
+       ry="8.392972"
+       inkscape:label="empacadura camara">
+      <desc
+         id="empacadura camara">empacadura camara</desc>
+      <title
+         id="empacadura camara">empacadura camara</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintiseis"
+       id="resortes"
        cx="358.41333"
        cy="142.88805"
        rx="12.10965"
-       ry="9.6566048" />
+       ry="9.6566048"
+       inkscape:label="resortes">
+      <desc
+         id="resortes">resortes</desc>
+      <title
+         id="resortes">resortes</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintisiete"
+       id="balancin"
        cx="358.8454"
        cy="109.68121"
        rx="11.497182"
-       ry="10.934834" />
+       ry="10.934834"
+       inkscape:label="balancin">
+      <desc
+         id="balancin">balancin</desc>
+      <title
+         id="balancin">balancin</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintiocho"
+       id="empacadura"
        cx="357.599"
        cy="83.663918"
        rx="10.634713"
-       ry="8.7810678" />
+       ry="8.7810678"
+       inkscape:label="empacadura">
+      <desc
+         id="empacadura">empacadura</desc>
+      <title
+         id="empacadura">empacadura</title>
+    </ellipse> 
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintinueve"
+       id="tapa culata"
        cx="358.64874"
        cy="58.903831"
        rx="11.94438"
-       ry="9.6298571" />
+       ry="9.6298571"
+       inkscape:label="culata">
+      <desc
+         id="culata">culata</desc>
+      <title
+         id="culata">culata</title>
+    </ellipse>
   </g>
 </svg>

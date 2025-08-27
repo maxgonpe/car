@@ -22,8 +22,34 @@
                 Ninguno
             {% endfor %}
             <br>
+        <!-- ==== Acciones y Mano de Obra ==== -->
+<strong>Acciones realizadas:</strong><br>
+{% with diagnostico.acciones_componentes.all as acciones %}
+    {% if acciones %}
+        <ul class="list-group list-group-flush my-2">
+            {% for dca in acciones %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>{{ dca.componente.nombre }}</strong> — {{ dca.accion.nombre }}
+                    </span>
+                    <span class="badge bg-primary rounded-pill">
+                        ${{ dca.precio_mano_obra|floatformat:0 }}
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+        <div class="text-end fw-bold">
+            Total mano de obra: 
+            ${{ diagnostico.total_mano_obra|default:0|floatformat:0 }}
+        </div>
+    {% else %}
+        <span class="text-muted">No se registraron acciones</span>
+    {% endif %}
+{% endwith %}
 
-        <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
+            
+
+                <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
 
         <a href="" class="btn btn-sm btn-secondary mt-2">Editar</a>
         <a href="{% url 'eliminar_diagnostico' diagnostico.pk %}" class="btn btn-sm btn-danger mt-2">Eliminar</a>

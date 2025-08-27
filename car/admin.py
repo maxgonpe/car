@@ -1,51 +1,63 @@
 from django.contrib import admin
-from .models import (Cliente, Vehiculo, Componente,
-					 Diagnostico, Reparacion, 
-					 RepuestoRecomendado, Presupuesto)
+from .models import (
+    Cliente, Vehiculo, Componente,
+    Diagnostico, Accion, ComponenteAccion, DiagnosticoComponenteAccion
+)
 
+# --- Inline para ComponenteAccion dentro de Componente ---
+class ComponenteAccionInline(admin.TabularInline):
+    model = ComponenteAccion
+    extra = 1
+    autocomplete_fields = ['accion']
 
-class VehiculoAdmin(admin.ModelAdmin):
-    list_display = ('id','cliente', 'marca', 'modelo','anio','placa','descripcion_motor')
-
-class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('id','nombre', 'telefono')
-
+# --- Admin de Componente ---
+@admin.register(Componente)
 class ComponenteAdmin(admin.ModelAdmin):
-    list_display = ('id','nombre', 'padre','activo')
+    list_display = ('id', 'nombre',)
+    search_fields = ('nombre',)
+    inlines = [ComponenteAccionInline]
 
-class DiagnosticoAdmin2(admin.ModelAdmin):
-    list_display = ('id','vehiculo', 'descripcion_problema','subcomponentes_sugeridos')
+# --- Admin de Accion ---
+@admin.register(Accion)
+class AccionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre',)
+    search_fields = ('nombre',)
 
+# --- Admin de ComponenteAccion ---
+@admin.register(ComponenteAccion)
+class ComponenteAccionAdmin(admin.ModelAdmin):
+    list_display = ('componente', 'accion', 'precio_mano_obra')
+    list_filter = ('componente', 'accion')
+    search_fields = ('componente__nombre', 'accion__nombre')
+
+# --- Inline para DiagnosticoComponenteAccion dentro de Diagnostico ---
+class DiagnosticoComponenteAccionInline(admin.TabularInline):
+    model = DiagnosticoComponenteAccion
+    extra = 1
+    autocomplete_fields = ['componente', 'accion']
+
+# --- Admin de Diagnostico ---
+@admin.register(Diagnostico)
 class DiagnosticoAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'vehiculo',
-        'nombre_cliente',
-        'descripcion_problema',
-        'listar_componentes',
-        'subcomponentes_sugeridos',
-        'fecha',
+    list_display = ('vehiculo', 'descripcion_problema', 'fecha')
+    list_filter = ('fecha',)
+    search_fields = (
+        'vehiculo__placa',
+        'vehiculo__marca',
+        'componentes__nombre',
     )
+    inlines = [DiagnosticoComponenteAccionInline]
 
-    def nombre_cliente(self, obj):
-        return obj.vehiculo.cliente.nombre  # Acceder al nombre del cliente
+# --- Admin de Vehiculo ---
+@admin.register(Vehiculo)
+class VehiculoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'marca', 'modelo', 'anio', 'placa')
+    search_fields = ('marca', 'modelo', 'placa')
 
-    nombre_cliente.short_description = 'Cliente'
+# --- Admin de Cliente ---
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'telefono')
+    search_fields = ('nombre', 'telefono')
 
-    #def listar_componentes(self, obj):
-    #    return ", ".join([c.nombre for c in obj.componentes.all()])
-    #listar_componentes.short_description = "Componentes"
-
-    def listar_componentes(self, obj):
-        return ", ".join([c.nombre for c in obj.componentes.order_by('padre__nombre', 'nombre')])
-
-
-admin.site.register(Cliente,ClienteAdmin)
-admin.site.register(Vehiculo,VehiculoAdmin)
-admin.site.register(Componente,ComponenteAdmin)
-admin.site.register(Diagnostico,DiagnosticoAdmin)
-admin.site.register(Reparacion)
-admin.site.register(RepuestoRecomendado)
-admin.site.register(Presupuesto)
-
-
+admin.site.register(DiagnosticoComponenteAccion)

@@ -12,13 +12,19 @@ from django.templatetags.static import static
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.staticfiles.storage import staticfiles_storage
+from django.views.decorators.http import require_GET
+from django.db import transaction
+from django.db.models import Sum
+from django.db.models import Q
 from .models import Presupuesto, RepuestoRecomendado,\
 					Diagnostico, Cliente, Vehiculo,\
-                    Componente
+                    Componente, Accion, ComponenteAccion,\
+                    DiagnosticoComponenteAccion
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
-                   DiagnosticoForm
+                   DiagnosticoForm, AccionForm, ComponenteAccionForm
 
 
+import json
 import re
 import pathlib
 import os
@@ -47,7 +53,137 @@ def componente_list(request):
     })
 
 
+
 def ingreso_view(request):
+    clientes_existentes = Cliente.objects.all().order_by('nombre')
+
+    selected_cliente = None
+    selected_vehiculo = None
+    selected_componentes_ids = []
+
+    if request.method == 'POST':
+        cliente_form = ClienteForm(request.POST, prefix='cliente')
+        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
+
+        cliente_id = request.POST.get('cliente_existente')
+        vehiculo_id = request.POST.get('vehiculo_existente')
+        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
+
+        # --- Cliente ---
+        cliente = None
+        if cliente_id:
+            try:
+                cliente = Cliente.objects.get(pk=cliente_id)
+                selected_cliente = cliente.pk
+            except Cliente.DoesNotExist:
+                cliente_form.add_error(None, "El cliente seleccionado no existe.")
+        else:
+            if cliente_form.is_valid():
+                cliente = cliente_form.save()
+                selected_cliente = cliente.pk
+
+        # --- Vehículo ---
+        vehiculo = None
+        if vehiculo_id:
+            try:
+                # Validar que pertenezca al cliente seleccionado
+                vehiculo = Vehiculo.objects.get(pk=vehiculo_id, cliente=cliente)
+                selected_vehiculo = vehiculo.pk
+            except Vehiculo.DoesNotExist:
+                vehiculo_form.add_error(None, "El vehículo seleccionado no existe o no pertenece al cliente.")
+        else:
+            if vehiculo_form.is_valid() and cliente:
+                vehiculo = vehiculo_form.save(commit=False)
+                vehiculo.cliente = cliente
+                vehiculo.save()
+                selected_vehiculo = vehiculo.pk
+
+        # --- Diagnóstico ---
+        if diagnostico_form.is_valid() and vehiculo:
+            diagnostico = diagnostico_form.save(commit=False)
+            diagnostico.vehiculo = vehiculo
+            diagnostico.save()
+
+            # M2M de componentes desde los checkboxes originales
+            diagnostico.componentes.set(selected_componentes_ids)
+
+            # ============ NUEVO: Acciones por componente desde el hidden JSON ============
+            acciones_json = (request.POST.get("acciones_componentes_json") or "").strip()
+            if acciones_json:
+                try:
+                    items = json.loads(acciones_json)
+                    # items: [{componente_id, accion_id, precio}, ...]
+                    with transaction.atomic():
+                        for it in items:
+                            try:
+                                comp_id = int(it.get("componente_id"))
+                                acc_id = int(it.get("accion_id"))
+                            except (TypeError, ValueError):
+                                continue
+
+                            precio = (it.get("precio") or "").strip()
+
+                            # Garantiza que el componente exista en el M2M del diagnóstico
+                            if not diagnostico.componentes.filter(id=comp_id).exists():
+                                # Si prefieres forzar el add, descomenta la siguiente línea:
+                                # diagnostico.componentes.add(comp_id)
+                                continue
+
+                            dca = DiagnosticoComponenteAccion(
+                                diagnostico=diagnostico,
+                                componente_id=comp_id,
+                                accion_id=acc_id,
+                            )
+                            # Si se ingresó precio manual válido, úsalo; si no, deja que el save() autocomplemente (si lo implementaste)
+                            if precio and precio not in ("0", "0.00"):
+                                dca.precio_mano_obra = precio
+                            dca.save()
+                except json.JSONDecodeError:
+                    # JSON malformado: lo ignoramos para no romper el flujo
+                    pass
+            # ============================================================================
+
+            messages.success(request, "Ingreso guardado correctamente.")
+            return redirect('panel_principal')
+        else:
+            # Opcional: debug
+            # print("Form diag errors:", diagnostico_form.errors)
+            pass
+
+    else:
+        cliente_form = ClienteForm(prefix='cliente')
+        vehiculo_form = VehiculoForm(prefix='vehiculo')
+        diagnostico_form = DiagnosticoForm(prefix='diag')
+
+    # 🚫 Importante: en la carga inicial no mandes todos los vehículos.
+    # Deja el select vacío y que el JS lo cargue según el cliente.
+    vehiculos_existentes = Vehiculo.objects.none()
+
+    # cargar motor.svg como string
+    svg_path = os.path.join(settings.BASE_DIR, "static", "images", "vehiculo-desde-abajo.svg")
+    svg_content = ""
+    try:
+        with open(svg_path, "r", encoding="utf-8") as f:
+            svg_content = f.read()
+    except FileNotFoundError:
+        pass
+
+    return render(request, 'car/ingreso.html', {
+        'cliente_form': cliente_form,
+        'vehiculo_form': vehiculo_form,
+        'diagnostico_form': diagnostico_form,
+        'clientes_existentes': clientes_existentes,
+        'vehiculos_existentes': vehiculos_existentes,  # vacío; se llenará por AJAX
+        'selected_cliente': selected_cliente,
+        'selected_vehiculo': selected_vehiculo,
+        'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
+        'selected_componentes_ids': selected_componentes_ids,
+        'svg': svg_content,
+    })
+
+
+def ingreso_view2(request):
     clientes_existentes = Cliente.objects.all().order_by('nombre')
 
     selected_cliente = None
@@ -266,11 +402,6 @@ def componentes_lookup(request):
     return JsonResponse({'found': True, 'parent': parent, 'children': hijos})
 
 
-
-
-
-
-
 def seleccionar_componente(request, codigo):
     try:
         comp = Componente.objects.get(codigo=codigo)
@@ -302,7 +433,16 @@ def get_vehiculos_por_cliente(request, cliente_id):
 
 
 def lista_diagnosticos(request):
-    diagnosticos = Diagnostico.objects.all().order_by('-fecha')
+    diagnosticos = Diagnostico.objects.all().select_related('vehiculo__cliente').prefetch_related(
+        'componentes',
+        'acciones_componentes__accion',
+        'acciones_componentes__componente'
+    ).order_by('-fecha')
+
+    # Anotar total por cada diagnóstico
+    diagnosticos = diagnosticos.annotate(
+        total_mano_obra=Sum('acciones_componentes__precio_mano_obra')
+    )
     return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})
 
 def eliminar_diagnostico(request, pk):
@@ -313,3 +453,154 @@ def eliminar_diagnostico(request, pk):
         
         return redirect('lista_diagnosticos')
     return render(request, 'car/diagnostico_eliminar.html', {'diagnostico': diagnostico})
+
+@require_GET
+def acciones_por_componente(request, componente_id: int):
+    """
+    Devuelve las acciones disponibles para un componente dado,
+    con el precio base (catálogo) si existe en ComponenteAccion.
+    """
+    qs = (ComponenteAccion.objects
+          .select_related("accion", "componente")
+          .filter(componente_id=componente_id)
+          .order_by("accion__nombre"))
+
+    data = [
+        {
+            "accion_id": ca.accion_id,
+            "accion_nombre": ca.accion.nombre,
+            "precio_base": str(ca.precio_mano_obra),
+        }
+        for ca in qs
+    ]
+
+    # Si no hay catálogo cargado, al menos devolvemos la lista de acciones globales
+    if not data:
+        acciones = Accion.objects.all().order_by("nombre")
+        data = [
+            {"accion_id": a.id, "accion_nombre": a.nombre, "precio_base": None}
+            for a in acciones
+        ]
+
+    return JsonResponse({"ok": True, "acciones": data})
+
+
+# ---- EJEMPLO de handler de guardado (adaptar al tuyo actual) ----
+# Supone que tu formulario ya crea el Diagnostico y guarda M2M de componentes.
+# Solo añadimos la lectura del hidden JSON para poblar DiagnosticoComponenteAccion.
+def guardar_diagnostico(request):
+    if request.method == "POST":
+        # ... tu lógica existente para Cliente/Vehiculo/Diagnostico ...
+        # Supongamos que al final tienes el objeto diagnostico creado:
+        # diagnostico = Diagnostico.objects.create(...)
+
+        acciones_json = request.POST.get("acciones_componentes_json", "").strip()  # hidden input
+        if acciones_json:
+            try:
+                payload = json.loads(acciones_json)
+                # Estructura esperada:
+                # [
+                #   {"componente_id": 1, "accion_id": 3, "precio": "200.00"},
+                #   {"componente_id": 2, "accion_id": 1, "precio": ""}  # vacío => autocompleta
+                # ]
+                with transaction.atomic():
+                    for item in payload:
+                        comp_id = int(item.get("componente_id"))
+                        acc_id = int(item.get("accion_id"))
+                        precio = item.get("precio")
+
+                        dca = DiagnosticoComponenteAccion(
+                            diagnostico=diagnostico,
+                            componente_id=comp_id,
+                            accion_id=acc_id,
+                        )
+                        # Si precio viene vacío o "0", el save() del modelo lo autocompleta desde ComponenteAccion
+                        if precio and str(precio).strip() not in ("0", "0.00", ""):
+                            dca.precio_mano_obra = precio
+                        dca.save()
+            except Exception:
+                # Puedes loguear el error si quieres
+                pass
+
+        # ... redirección o response ...
+
+# ----- ACCION -----
+def accion_list(request):
+    q = (request.GET.get("q") or "").strip()
+    acciones = Accion.objects.all().order_by("nombre")
+    if q:
+        acciones = acciones.filter(nombre__icontains=q)
+    return render(request, "car/accion_list.html", {"acciones": acciones, "q": q})
+
+def accion_create(request):
+    if request.method == "POST":
+        form = AccionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Acción creada correctamente.")
+            return redirect("accion_list")
+    else:
+        form = AccionForm()
+    return render(request, "car/accion_form.html", {"form": form, "modo": "crear"})
+
+def accion_update(request, pk):
+    accion = get_object_or_404(Accion, pk=pk)
+    if request.method == "POST":
+        form = AccionForm(request.POST, instance=accion)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Acción actualizada.")
+            return redirect("accion_list")
+    else:
+        form = AccionForm(instance=accion)
+    return render(request, "car/accion_form.html", {"form": form, "modo": "editar", "accion": accion})
+
+def accion_delete(request, pk):
+    accion = get_object_or_404(Accion, pk=pk)
+    if request.method == "POST":
+        accion.delete()
+        messages.success(request, "Acción eliminada.")
+        return redirect("accion_list")
+    return render(request, "car/accion_confirm_delete.html", {"accion": accion})
+
+
+# ----- COMPONENTE + ACCION (precios) -----
+def comp_accion_list(request):
+    q = (request.GET.get("q") or "").strip()
+    items = ComponenteAccion.objects.select_related("componente", "accion").order_by("componente__nombre", "accion__nombre")
+    if q:
+        items = items.filter(
+            Q(componente__nombre__icontains=q) | Q(accion__nombre__icontains=q)
+        )
+    return render(request, "car/comp_accion_list.html", {"items": items, "q": q})
+
+def comp_accion_create(request):
+    if request.method == "POST":
+        form = ComponenteAccionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Precio de mano de obra registrado.")
+            return redirect("comp_accion_list")
+    else:
+        form = ComponenteAccionForm()
+    return render(request, "car/comp_accion_form.html", {"form": form, "modo": "crear"})
+
+def comp_accion_update(request, pk):
+    obj = get_object_or_404(ComponenteAccion, pk=pk)
+    if request.method == "POST":
+        form = ComponenteAccionForm(request.POST, instance=obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Precio de mano de obra actualizado.")
+            return redirect("comp_accion_list")
+    else:
+        form = ComponenteAccionForm(instance=obj)
+    return render(request, "car/comp_accion_form.html", {"form": form, "modo": "editar", "obj": obj})
+
+def comp_accion_delete(request, pk):
+    obj = get_object_or_404(ComponenteAccion, pk=pk)
+    if request.method == "POST":
+        obj.delete()
+        messages.success(request, "Registro eliminado.")
+        return redirect("comp_accion_list")
+    return render(request, "car/comp_accion_confirm_delete.html", {"obj": obj})

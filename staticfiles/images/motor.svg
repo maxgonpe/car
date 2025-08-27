@@ -27,12 +27,12 @@
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
      inkscape:zoom="2.5186676"
-     inkscape:cx="257.67592"
-     inkscape:cy="97.869205"
+     inkscape:cx="207.64947"
+     inkscape:cy="193.3562"
      inkscape:window-width="1280"
-     inkscape:window-height="664"
-     inkscape:window-x="0"
-     inkscape:window-y="27"
+     inkscape:window-height="691"
+     inkscape:window-x="1024"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="g8" />
   <g
@@ -70,11 +70,17 @@
        ry="8.7253141" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="path846"
+       id="bujias"
        cx="98.696983"
        cy="256.99612"
        rx="6.686049"
-       ry="6.6775794" />
+       ry="6.6775794"
+       inkscape:label="bujias">
+      <desc
+         id="desc913">bujias</desc>
+      <title
+         id="title911">bujias</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
        id="cinco"
@@ -238,11 +244,17 @@
        ry="10.934834" />
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
-       id="veintiocho"
+       id="empacadura"
        cx="357.599"
        cy="83.663918"
        rx="10.634713"
-       ry="8.7810678" />
+       ry="8.7810678"
+       inkscape:label="empacadura">
+      <desc
+         id="desc873">empacadura</desc>
+      <title
+         id="title871">empacadura</title>
+    </ellipse>
     <ellipse
        style="fill:transparent;stroke:none;pointer-events:all"
        id="veintinueve"

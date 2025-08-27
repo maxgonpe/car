@@ -18,6 +18,18 @@ urlpatterns = [
     path('plano/', views.mostrar_plano, name='plano_interactivo'),
     path('diagnosticos/', views.lista_diagnosticos, name='lista_diagnosticos'),
     path('eliminar/diagnosticos/', views.eliminar_diagnostico, name='eliminar_diagnostico'),
+    path("car/acciones-lookup/<int:componente_id>/", views.acciones_por_componente, name="acciones_por_componente"),
+    # Acciones
+    path("acciones/", views.accion_list, name="accion_list"),
+    path("acciones/nueva/", views.accion_create, name="accion_create"),
+    path("acciones/<int:pk>/editar/", views.accion_update, name="accion_update"),
+    path("acciones/<int:pk>/eliminar/", views.accion_delete, name="accion_delete"),
+
+    # Componente + Acción (precios)
+    path("componente-acciones/", views.comp_accion_list, name="comp_accion_list"),
+    path("componente-acciones/nuevo/", views.comp_accion_create, name="comp_accion_create"),
+    path("componente-acciones/<int:pk>/editar/", views.comp_accion_update, name="comp_accion_update"),
+    path("componente-acciones/<int:pk>/eliminar/", views.comp_accion_delete, name="comp_accion_delete"),
 
 ]   
 

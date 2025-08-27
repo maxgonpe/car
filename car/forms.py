@@ -1,6 +1,6 @@
 from django import forms
 from .models import Componente, Cliente, Vehiculo,\
-                    Diagnostico
+                    Diagnostico,Accion, ComponenteAccion
 
 
 class ClienteForm(forms.ModelForm):
@@ -50,3 +50,50 @@ class ComponenteForm(forms.ModelForm):
                 raise forms.ValidationError("Ya existe un componente con ese nombre bajo el mismo padre.")
             return cleaned
 
+class AccionForm(forms.ModelForm):
+    class Meta:
+        model = Accion
+        fields = ["nombre"]
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class": "form-control", "placeholder": "Desarmar / Revisar / Calibrar ..."})
+        }
+
+    def clean_nombre(self):
+        n = (self.cleaned_data.get("nombre") or "").strip()
+        if not n:
+            raise forms.ValidationError("El nombre es obligatorio.")
+        # normaliza para evitar duplicados por mayúsculas/minúsculas
+        if Accion.objects.exclude(pk=self.instance.pk).filter(nombre__iexact=n).exists():
+            raise forms.ValidationError("Ya existe una acción con ese nombre.")
+        return n
+
+
+class ComponenteAccionForm(forms.ModelForm):
+    componente = forms.ModelChoiceField(
+        queryset=Componente.objects.all().order_by("nombre"),
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+    accion = forms.ModelChoiceField(
+        queryset=Accion.objects.all().order_by("nombre"),
+        widget=forms.Select(attrs={"class": "form-select"})
+    )
+    precio_mano_obra = forms.DecimalField(
+        max_digits=10, decimal_places=2, min_value=0,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "placeholder": "0.00"})
+    )
+
+    class Meta:
+        model = ComponenteAccion
+        fields = ["componente", "accion", "precio_mano_obra"]
+
+    def clean(self):
+        cleaned = super().clean()
+        comp = cleaned.get("componente")
+        acc = cleaned.get("accion")
+        if comp and acc:
+            exists = ComponenteAccion.objects.exclude(pk=self.instance.pk).filter(
+                componente=comp, accion=acc
+            ).exists()
+            if exists:
+                raise forms.ValidationError("Ya existe un precio para ese Componente + Acción.")
+        return cleaned

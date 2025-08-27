@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{% if modo == 'editar' %}Editar precio{% else %}Nuevo precio{% endif %}</h2>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-warning">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-2">
+        <div class="col-12 col-md-5">
+          <label class="form-label">Componente</label>
+          {{ form.componente }}
+          {% for e in form.componente.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label">Acción</label>
+          {{ form.accion }}
+          {% for e in form.accion.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label">Precio</label>
+          {{ form.precio_mano_obra }}
+          {% for e in form.precio_mano_obra.errors %}
+            <div class="text-danger small">{{ e }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" type="submit">Guardar</button>
+        <a href="{% url 'comp_accion_list' %}" class="btn btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
