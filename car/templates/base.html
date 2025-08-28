@@ -67,25 +67,28 @@
 
     /* -------- MODO OSCURO -------- */
     .dark-mode {
-      background-color: #121212 !important;
+      background-color: #2b2b2b !important;  /* gris oscuro */
       color: #e0e0e0 !important;
     }
     .dark-mode .navbar {
-      background-color: #1e1e1e !important;
+      background-color: #3a3a3a !important;
     }
     .dark-mode .card {
-      background-color: #1e1e1e;
-      border: 1px solid #333;
+      background-color: #3a3a3a;
+      border: 1px solid #555;
     }
     .dark-mode footer {
-      background-color: #1e1e1e !important;
-      color: #aaa !important;
+      background-color: #3a3a3a !important;
+      color: #bbb !important;
     }
     .dark-mode h2, 
     .dark-mode h5, 
     .dark-mode h6 {
-      color: #e0e0e0 !important;
+      color: #f0f0f0 !important;
     }
+
+
+
   </style>
   {% endblock %}
 </head>
@@ -138,7 +141,7 @@
           </li>
         {% else %}
           <li class="nav-item">
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'login' %}">Iniciar sesión</a>
+            <a class="btn btn-outline-primary btn-sm" href="">Iniciar sesión</a>
           </li>
         {% endif %}
       </ul>
@@ -201,13 +204,26 @@
 
     // -------- Script de modo oscuro --------
     document.addEventListener("DOMContentLoaded", function() {
-      const btn = document.getElementById("toggle-dark");
-      btn.addEventListener("click", function() {
-        document.body.classList.toggle("dark-mode");
-        btn.textContent = document.body.classList.contains("dark-mode") 
-          ? "☀️ Modo claro" : "🌙 Modo oscuro";
-      });
-    });
+  const btn = document.getElementById("toggle-dark");
+
+  // Restaurar preferencia guardada
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-mode");
+    btn.textContent = "☀️ Modo claro";
+  }
+
+  btn.addEventListener("click", function() {
+    document.body.classList.toggle("dark-mode");
+    if (document.body.classList.contains("dark-mode")) {
+      btn.textContent = "☀️ Modo claro";
+      localStorage.setItem("theme", "dark");
+    } else {
+      btn.textContent = "🌙 Modo oscuro";
+      localStorage.setItem("theme", "light");
+    }
+  });
+});
+   
   </script>
 
   <!-- Espacio para scripts por página -->

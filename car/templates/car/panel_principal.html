@@ -9,116 +9,157 @@
     <h2 class="mb-0">👋 Hola, {{ user.username }}</h2>
     <form method="post" action="">
       {% csrf_token %}
+
+
       <button type="submit" class="btn btn-outline-danger btn-sm">Cerrar sesión</button>
+    
+
+        <button id="toggle-dark"type="button"
+        class="btn btn-outline-secondary btn-sm me-2">
+          🌙 Modo oscuro
+        </button>
+      
+
+
+
     </form>
   </div>
 
-  
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4" id="panelTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="gestion-tab" data-bs-toggle="tab" data-bs-target="#gestion" type="button" role="tab">Gestión Taller</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">Administración</button>
+    </li>
+  </ul>
 
-  <!-- Panel principal -->
-  <div class="row g-3">
+  <div class="tab-content" id="panelTabsContent">
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{% url 'componente_list' %}" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">⚙️</div>
-          <h6 class="mt-2"><strong>Componentes</strong></h6>
-          <h6>partes del vehiculo</h6>
+    <!-- TAB 1: Gestión -->
+    <div class="tab-pane fade show active" id="gestion" role="tabpanel">
+      <div class="row g-3">
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'ingreso' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">📝</div>
+              <h6 class="mt-2">Diagnósticos</h6>
+            </div>
+          </a>
         </div>
-      </a>
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">📋</div>
+              <h6 class="mt-2">Pre-Ingreso</h6>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">🔨</div>
+              <h6 class="mt-2">Trabajos</h6>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">✅</div>
+              <h6 class="mt-2">Entregados</h6>
+            </div>
+          </a>
+        </div>
+
+      </div>
     </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="#" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">🛠️</div>
-          <h6 class="mt-2">Herramientas</h6>
+    <!-- TAB 2: Administración -->
+    <div class="tab-pane fade" id="admin" role="tabpanel">
+      <div class="row g-3">
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'componente_list' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">⚙️</div>
+              <h6 class="mt-2">Componentes</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="#" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">👨‍🔧</div>
-          <h6 class="mt-2">Mecánicos</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">🛠️</div>
+              <h6 class="mt-2">Herramientas</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="#" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">⚙️</div>
-          <h6 class="mt-2">Repuestos</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">👨‍🔧</div>
+              <h6 class="mt-2">Mecánicos</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{% url 'ingreso' %}" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">📝</div>
-          <h6 class="mt-2">Diagnósticos</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">🔩</div>
+              <h6 class="mt-2">Repuestos</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="#" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">📋</div>
-          <h6 class="mt-2">Pre-Ingreso</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="#" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">🏠</div>
+              <h6 class="mt-2">Espacio</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="#" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">🏠</div>
-          <h6 class="mt-2">Espacio</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'accion_list' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">🔧</div>
+              <h6 class="mt-2">Acciones</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-        <!-- Acciones (verbos) -->
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{% url 'accion_list' %}" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">🔧</div>
-          <h6 class="mt-2"><strong>Acciones</strong></h6>
-          <h6>verbos de reparación</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'comp_accion_list' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">💲</div>
+              <h6 class="mt-2">Precios Mano Obra</h6>
+            </div>
+          </a>
         </div>
-      </a>
-    </div>
 
-    <!-- Componente + Acción -->
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{% url 'comp_accion_list' %}" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">💲</div>
-          <h6 class="mt-2"><strong>Precios Mano Obra</strong></h6>
-          <h6>componente + acción</h6>
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'lista_diagnosticos' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">➕</div>
+              <h6 class="mt-2">Otros</h6>
+            </div>
+          </a>
         </div>
-      </a>
+
+      </div>
     </div>
-
-
-
-    <div class="col-6 col-md-4 col-lg-3">
-      <a href="{% url 'lista_diagnosticos' %}" class="card text-center shadow-sm h-100 link-card">
-        <div class="card-body d-flex flex-column justify-content-center">
-          <div class="display-6">➕</div>
-          <h6 class="mt-2">Otros</h6>
-        </div>
-      </a>
-    </div>
-
   </div>
 </div>
-
-
 
 <style>
 /* Estilo para las tarjetas de botones */
@@ -133,19 +174,7 @@
   box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 
-/* Modo oscuro */
-.dark-mode {
-  background-color: #121212;
-  color: #e0e0e0;
-}
-.dark-mode .card {
-  background-color: #1e1e1e;
-  border: 1px solid #333;
-}
-.dark-mode h2, 
-.dark-mode h6 {
-  color: #e0e0e0;
-}
+
 </style>
 
 {% endblock %}
