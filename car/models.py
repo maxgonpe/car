@@ -114,26 +114,7 @@ class Reparacion(models.Model):
     accion = models.CharField(max_length=200)
     tiempo_estimado_minutos = models.PositiveIntegerField()
 
-class RepuestoRecomendado(models.Model):
-    reparacion = models.ForeignKey(Reparacion, on_delete=models.CASCADE)
-    nombre = models.CharField(max_length=100)
-    cantidad = models.PositiveIntegerField(default=1)
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=20, choices=[
-        ('pendiente', 'Pendiente'),
-        ('en_stock', 'En stock'),
-        ('pedido', 'Solicitado'),
-        ('instalado', 'Instalado'),
-    ], default='pendiente')
 
-
-class Presupuesto(models.Model):
-    diagnostico = models.OneToOneField(Diagnostico, on_delete=models.CASCADE)
-    costo_repuestos = models.DecimalField(max_digits=10, decimal_places=2)
-    costo_mano_obra = models.DecimalField(max_digits=10, decimal_places=2)
-    ganancia = models.DecimalField(max_digits=10, decimal_places=2)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_entrega = models.DateField()
 
 class Accion(models.Model):
     nombre = models.CharField(max_length=100, unique=True)

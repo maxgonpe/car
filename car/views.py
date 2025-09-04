@@ -16,8 +16,7 @@ from django.views.decorators.http import require_GET
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models import Q
-from .models import Presupuesto, RepuestoRecomendado,\
-					Diagnostico, Cliente, Vehiculo,\
+from .models import Diagnostico, Cliente, Vehiculo,\
                     Componente, Accion, ComponenteAccion,\
                     DiagnosticoComponenteAccion
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
