@@ -4,7 +4,7 @@ from django.conf import settings
 from django.http import Http404
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -603,3 +603,80 @@ def comp_accion_delete(request, pk):
         messages.success(request, "Registro eliminado.")
         return redirect("comp_accion_list")
     return render(request, "car/comp_accion_confirm_delete.html", {"obj": obj})
+
+# funciones adicionales para incluir repuestos
+
+
+def sugerir_repuestos(request, diagnostico_id):
+    diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
+    veh = diag.vehiculo
+    componentes_ids = list(diag.componentes.values_list('id', flat=True))
+
+    # 1) buscar repuestos vinculados directamente al componente
+    repuestos_comp = Repuesto.objects.filter(
+        componenterepuesto__componente_id__in=componentes_ids
+    ).distinct()
+
+    # 2) filtrar por compatibilidad con versión del vehículo (si existe)
+    version = VehiculoVersion.objects.filter(
+        marca__iexact=veh.marca, modelo__iexact=veh.modelo,
+        anio_desde__lte=veh.anio, anio_hasta__gte=veh.anio
+    ).first()
+
+    if version:
+        repuestos_by_version = Repuesto.objects.filter(aplicaciones__version=version).distinct()
+        candidates = (repuestos_comp | repuestos_by_version).distinct()
+    else:
+        candidates = repuestos_comp
+
+    # 3) enriquecer con stock y precio (repuesto_en_stock)
+    resultados = []
+    for r in candidates.select_related().order_by('nombre')[:60]:
+        stock_obj = r.stocks.order_by('-ultima_actualizacion').first()
+        resultados.append({
+            "id": r.id,
+            "sku": r.sku,
+            "oem": r.oem,
+            "nombre": r.nombre,
+            "posicion": r.posicion,
+            "precio_venta": float(r.precio_venta or 0),
+            "stock": stock_obj.stock if stock_obj else 0,
+            "disponible": stock_obj.disponible if stock_obj else 0,
+            "repuesto_stock_id": stock_obj.id if stock_obj else None,
+        })
+
+    return JsonResponse({"repuestos": resultados})
+
+
+def agregar_repuesto(request, diagnostico_id):
+    # POST {repuesto_id, repuesto_stock_id, cantidad}
+    diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
+    repuesto_id = request.POST.get('repuesto_id')
+    stock_id = request.POST.get('repuesto_stock_id')
+    cantidad = int(request.POST.get('cantidad', 1))
+
+    rep = get_object_or_404(Repuesto, pk=repuesto_id)
+
+    with transaction.atomic():
+        repstk = None
+        if stock_id:
+            repstk = RepuestoEnStock.objects.select_for_update().get(pk=stock_id)
+            if repstk.disponible < cantidad:
+                return JsonResponse({"error": "Stock insuficiente"}, status=400)
+            # reservar temporalmente
+            repstk.reservado = (repstk.reservado or 0) + cantidad
+            repstk.save()
+            StockMovimiento.objects.create(
+                repuesto_stock=repstk, tipo='reserva', cantidad=cantidad,
+                motivo='Reserva desde diagnóstico', referencia=f'DIAG-{diag.id}', usuario=request.user
+            )
+
+        dr = DiagnosticoRepuesto.objects.create(
+            diagnostico=diag, repuesto=rep, repuesto_stock=repstk,
+            cantidad=cantidad,
+            precio_unitario = repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta,
+            subtotal = (repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta) * cantidad,
+            reservado = bool(repstk)
+        )
+
+    return JsonResponse({"ok": True, "dr_id": dr.id})
