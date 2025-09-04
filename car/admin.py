@@ -1,8 +1,12 @@
 from django.contrib import admin
 from .models import (
     Cliente, Vehiculo, Componente,
-    Diagnostico, Accion, ComponenteAccion, DiagnosticoComponenteAccion
-)
+    Diagnostico, Accion, ComponenteAccion, DiagnosticoComponenteAccion,
+    Repuesto, RepuestoEnStock, DiagnosticoRepuesto,StockMovimiento,
+    VehiculoVersion, ComponenteRepuesto,
+    RepuestoAplicacion
+
+    )
 
 # --- Inline para ComponenteAccion dentro de Componente ---
 class ComponenteAccionInline(admin.TabularInline):
@@ -61,3 +65,10 @@ class ClienteAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'telefono')
 
 admin.site.register(DiagnosticoComponenteAccion)
+admin.site.register(Repuesto)
+admin.site.register(RepuestoEnStock)
+admin.site.register(DiagnosticoRepuesto)
+admin.site.register(StockMovimiento)
+admin.site.register(VehiculoVersion)
+admin.site.register(ComponenteRepuesto)
+admin.site.register(RepuestoAplicacion)

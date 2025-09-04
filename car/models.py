@@ -1,5 +1,7 @@
 from django.db import models
 from django.db import models
+from django.conf import settings
+from decimal import Decimal
 from django.utils.text import slugify
 
 # Create your models here.
@@ -170,6 +172,89 @@ class DiagnosticoComponenteAccion(models.Model):
                 # Si no existe en catálogo, lo dejamos en 0 para que el admin lo note
                 pass
         super().save(*args, **kwargs)
+
+
+class Repuesto(models.Model):
+    sku = models.CharField(max_length=64, unique=True, blank=True, null=True)  # código interno
+    oem = models.CharField(max_length=64, blank=True, null=True)               # OEM / fabricante
+    referencia = models.CharField(max_length=128, blank=True, null=True)       # ref proveedor
+    nombre = models.CharField(max_length=250)
+    marca = models.CharField(max_length=120, blank=True)
+    descripcion = models.TextField(blank=True)
+    medida = models.CharField(max_length=80, blank=True)   # ej. "258x22mm"
+    posicion = models.CharField(max_length=80, blank=True) # ej. "freno delantero"
+    unidad = models.CharField(max_length=20, default='pieza')
+    precio_costo = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
+
+class VehiculoVersion(models.Model):
+    marca = models.CharField(max_length=80)
+    modelo = models.CharField(max_length=120)
+    anio_desde = models.IntegerField()
+    anio_hasta = models.IntegerField()
+    # opcionales: engine_code, trim, etc.
+
+    class Meta:
+        unique_together = ("marca", "modelo", "anio_desde", "anio_hasta")
+
+    def __str__(self):
+        return f"{self.marca} {self.modelo} {self.anio_desde}-{self.anio_hasta}"
+
+class ComponenteRepuesto(models.Model):
+    componente = models.ForeignKey('Componente', on_delete=models.CASCADE)  # tu modelo de componente
+    repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE)
+    nota = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        unique_together = ("componente", "repuesto")
+
+class RepuestoAplicacion(models.Model):
+    repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE, related_name="aplicaciones")
+    version = models.ForeignKey(VehiculoVersion, on_delete=models.CASCADE)
+    posicion = models.CharField(max_length=80, blank=True)  # opcional, sinon usar repuesto.posicion
+
+    class Meta:
+        unique_together = ("repuesto", "version")
+
+class RepuestoEnStock(models.Model):
+    repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE, related_name='stocks')
+    deposito = models.CharField(max_length=80, default='bodega-principal')  # o FK a un modelo Deposito
+    proveedor = models.CharField(max_length=120, blank=True)  # info del proveedor
+    stock = models.IntegerField(default=0)
+    reservado = models.IntegerField(default=0)  # cantidad reservada por diagnósticos pendientes
+    precio_compra = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    precio_venta = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # en este sitio
+    ultima_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("repuesto", "deposito", "proveedor")
+
+    @property
+    def disponible(self):
+        return self.stock - (self.reservado or 0)
+
+class StockMovimiento(models.Model):
+    repuesto_stock = models.ForeignKey(RepuestoEnStock, on_delete=models.CASCADE, related_name='movimientos')
+    tipo = models.CharField(max_length=20, choices=(('ingreso','ingreso'),('salida','salida'),('reserva','reserva'),('liberacion','liberacion')))
+    cantidad = models.IntegerField()
+    motivo = models.CharField(max_length=200, blank=True)
+    referencia = models.CharField(max_length=120, blank=True)  # ej ODT/DIAG id
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+class DiagnosticoRepuesto(models.Model):
+    diagnostico = models.ForeignKey('Diagnostico', on_delete=models.CASCADE, related_name='repuestos')
+    repuesto = models.ForeignKey(Repuesto, on_delete=models.PROTECT)
+    repuesto_stock = models.ForeignKey(RepuestoEnStock, on_delete=models.SET_NULL, null=True, blank=True)
+    cantidad = models.IntegerField(default=1)
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    reservado = models.BooleanField(default=False)  # si fue reservado en stock
+    creado = models.DateTimeField(auto_now_add=True)
 
 
 
