@@ -37,7 +37,10 @@ urlpatterns = [
     # === Repuestos sugeridos ===
     path('diagnostico/sugerir-repuestos/', views.sugerir_repuestos, name='sugerir_repuestos_preview'),
     path('diagnostico/<int:diagnostico_id>/sugerir-repuestos/', views.sugerir_repuestos, name='sugerir_repuestos'),
-
+    path("diagnosticos/excel/", views.exportar_diagnosticos_excel, name="diagnosticos_excel"),
+    path("diagnosticos/pdf/", views.exportar_diagnosticos_pdf, name="diagnosticos_pdf"),
+    path("diagnosticos/<int:pk>/excel/", views.exportar_diagnostico_excel, name="diagnostico_excel"),
+    path("diagnosticos/<int:pk>/pdf/", views.exportar_diagnostico_pdf, name="diagnostico_pdf"),
     # === CRUD de repuestos en diagnóstico ===
     path('diagnostico/<int:diagnostico_id>/agregar-repuesto/', views.agregar_repuesto, name='agregar_repuesto'),
     path('diagnostico/<int:diagnostico_id>/repuestos/', views.listar_repuestos_diagnostico, name='listar_repuestos_diagnostico'),

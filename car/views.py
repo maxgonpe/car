@@ -15,8 +15,13 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.http import HttpResponse
 from django.db.models import Sum
 from django.db.models import Q
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 from .models import Diagnostico, Cliente, Vehiculo,\
                     Componente, Accion, ComponenteAccion,\
                     DiagnosticoComponenteAccion, Repuesto, VehiculoVersion,\
@@ -26,6 +31,7 @@ from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
 
 
 import json
+import openpyxl
 import re
 import pathlib
 import os
@@ -383,6 +389,22 @@ def lista_diagnosticos(request):
     diagnosticos = Diagnostico.objects.all().select_related('vehiculo__cliente').prefetch_related(
         'componentes',
         'acciones_componentes__accion',
+        'acciones_componentes__componente',
+        'repuestos'  # Asegúrate de incluir los repuestos aquí
+    ).order_by('-fecha')
+
+    # Anotar total por cada diagnóstico
+    diagnosticos = diagnosticos.annotate(
+        total_mano_obra=Sum('acciones_componentes__precio_mano_obra'),
+        total_repuestos=Sum('repuestos__subtotal')  # Asegúrate de que 'subtotal' esté definido en tu modelo
+    )
+
+    return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})
+
+def lista_diagnosticos2(request):
+    diagnosticos = Diagnostico.objects.all().select_related('vehiculo__cliente').prefetch_related(
+        'componentes',
+        'acciones_componentes__accion',
         'acciones_componentes__componente'
     ).order_by('-fecha')
 
@@ -695,3 +717,311 @@ def listar_repuestos_diagnostico(request, diagnostico_id):
         "repuestos": repuestos,
         "total": total
     })
+
+
+def exportar_diagnosticos_excel(request):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Diagnósticos"
+
+    # Encabezados
+    ws.append([
+        "Fecha", "Cliente", "Teléfono", "Vehículo", "Diagnóstico",
+        "Acciones", "Total Mano de Obra",
+        "Repuestos", "Total Repuestos",
+        "Total Presupuesto"
+    ])
+
+    for diag in Diagnostico.objects.all():
+        acciones = ", ".join([f"{dca.componente.nombre} - {dca.accion.nombre}" for dca in diag.acciones_componentes.all()])
+        repuestos = ", ".join([f"{dr.repuesto.nombre} (x{dr.cantidad})" for dr in diag.repuestos.all()])
+        total_mo = diag.total_mano_obra or 0
+        total_repuestos = sum([dr.subtotal for dr in diag.repuestos.all()])
+        total = total_mo + total_repuestos
+
+        ws.append([
+            diag.fecha.strftime("%d-%m-%Y"),
+            diag.vehiculo.cliente.nombre,
+            diag.vehiculo.cliente.telefono,
+            str(diag.vehiculo),
+            diag.descripcion_problema,
+            acciones,
+            total_mo,
+            repuestos,
+            total_repuestos,
+            total
+        ])
+
+    # Preparar respuesta HTTP
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="diagnosticos.xlsx"'
+    wb.save(response)
+    return response
+
+def exportar_diagnosticos_pdf(request):
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="diagnosticos.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("<b>Reporte de Diagnósticos</b>", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    data = [["Fecha", "Cliente", "Vehículo", "Diagnóstico", "Total Presupuesto"]]
+
+    for diag in Diagnostico.objects.all():
+        total_mo = diag.total_mano_obra or 0
+        total_repuestos = sum([dr.subtotal for dr in diag.repuestos.all()])
+        total = total_mo + total_repuestos
+
+        data.append([
+            diag.fecha.strftime("%d-%m-%Y"),
+            diag.vehiculo.cliente.nombre,
+            str(diag.vehiculo),
+            diag.descripcion_problema,
+            f"${total:,}"
+        ])
+
+    table = Table(data, colWidths=[80, 100, 120, 150, 80])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.grey),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0,0), (-1,0), 8),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+    return response
+
+def exportar_diagnostico_excel(request, pk):
+    diag = get_object_or_404(Diagnostico, pk=pk)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Diagnóstico {diag.pk}"
+
+    ws.append(["Fecha", diag.fecha.strftime("%d-%m-%Y")])
+    ws.append(["Cliente", diag.vehiculo.cliente.nombre])
+    ws.append(["Teléfono", diag.vehiculo.cliente.telefono])
+    ws.append(["Vehículo", str(diag.vehiculo)])
+    ws.append(["Descripción", diag.descripcion_problema])
+    ws.append([])
+
+    # Acciones
+    ws.append(["Acciones realizadas", "Precio"])
+    total_mo = 0
+    for dca in diag.acciones_componentes.all():
+        ws.append([f"{dca.componente.nombre} — {dca.accion.nombre}", dca.precio_mano_obra or 0])
+        total_mo += dca.precio_mano_obra or 0
+    ws.append(["Total Mano de Obra", total_mo])
+    ws.append([])
+
+    # Repuestos
+    ws.append(["Repuestos", "Cantidad", "Precio Unitario", "Subtotal"])
+    total_rep = 0
+    for dr in diag.repuestos.all():
+        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
+        ws.append([dr.repuesto.nombre, dr.cantidad, dr.precio_unitario, subtotal])
+        total_rep += subtotal
+    ws.append(["Total Repuestos", "", "", total_rep])
+    ws.append([])
+
+    ws.append(["TOTAL PRESUPUESTO", total_mo + total_rep])
+
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="diagnostico_{diag.pk}.xlsx"'
+    wb.save(response)
+    return response
+
+def exportar_diagnostico_pdf2(request, pk):
+    diag = get_object_or_404(Diagnostico, pk=pk)
+
+    response = HttpResponse(content_type="application/pdf")
+    #response["Content-Disposition"] = f'attachment; filename="diagnostico_{diag.pk}.pdf"'
+    response["Content-Disposition"] = f'inline; filename="diagnostico_{diag.pk}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
+    elements.append(Spacer(1, 12))
+
+    # Acciones
+    data = [["Acción", "Precio"]]
+    total_mo = 0
+    for dca in diag.acciones_componentes.all():
+        data.append([f"{dca.componente.nombre} — {dca.accion.nombre}", f"${dca.precio_mano_obra or 0:,}"])
+        total_mo += dca.precio_mano_obra or 0
+    data.append(["Total Mano de Obra", f"${total_mo:,}"])
+    elements.append(Table(data, colWidths=[300, 100]))
+    elements.append(Spacer(1, 12))
+
+    # Repuestos
+    data = [["Repuesto", "Cantidad", "Unitario", "Subtotal"]]
+    total_rep = 0
+    for dr in diag.repuestos.all():
+        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
+        data.append([dr.repuesto.nombre, dr.cantidad, f"${dr.precio_unitario:,}", f"${subtotal:,}"])
+        total_rep += subtotal
+    data.append(["Total Repuestos", "", "", f"${total_rep:,}"])
+    elements.append(Table(data, colWidths=[200, 70, 70, 100]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph(f"<b>TOTAL PRESUPUESTO: ${total_mo + total_rep:,}</b>", styles["Heading2"]))
+
+    doc.build(elements)
+    return response
+
+def exportar_diagnostico_pdf3(request, pk):
+    diag = get_object_or_404(Diagnostico, pk=pk)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="diagnostico_{diag.pk}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
+    elements.append(Spacer(1, 12))
+
+    # Tabla de Acciones
+    acciones_data = [["Acción", "Precio"]]
+    total_mo = 0
+    for dca in diag.acciones_componentes.all():
+        acciones_data.append([f"{dca.componente.nombre} — {dca.accion.nombre}", f"${dca.precio_mano_obra or 0:,}"])
+        total_mo += dca.precio_mano_obra or 0
+    acciones_data.append(["Total Mano de Obra", f"${total_mo:,}"])
+
+    acciones_table = Table(acciones_data, colWidths=[300, 100])
+    acciones_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('SIZE', (0, 0), (-1, 0), 14),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(acciones_table)
+    elements.append(Spacer(1, 12))
+
+    # Tabla de Repuestos
+    repuestos_data = [["Repuesto", "Cantidad", "Unitario", "Subtotal"]]
+    total_rep = 0
+    for dr in diag.repuestos.all():
+        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
+        repuestos_data.append([dr.repuesto.nombre, dr.cantidad, f"${dr.precio_unitario:,}", f"${subtotal:,}"])
+        total_rep += subtotal
+    repuestos_data.append(["Total Repuestos", "", "", f"${total_rep:,}"])
+
+    repuestos_table = Table(repuestos_data, colWidths=[200, 70, 70, 100])
+    repuestos_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('SIZE', (0, 0), (-1, 0), 14),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(repuestos_table)
+    elements.append(Spacer(1, 12))
+
+    # Total Presupuesto
+    total_presupuesto = total_mo + total_rep
+    elements.append(Paragraph(f"<b>TOTAL PRESUPUESTO: ${total_presupuesto:,}</b>", styles["Heading2"]))
+
+    doc.build(elements)
+    return response
+
+def exportar_diagnostico_pdf(request, pk):
+    diag = get_object_or_404(Diagnostico, pk=pk)
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="diagnostico_{diag.pk}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
+    elements.append(Spacer(1, 12))
+
+    # Tabla de Acciones
+    acciones_data = [["Mano de Obra", "Precio"]]
+    total_mo = 0
+    for dca in diag.acciones_componentes.all():
+        acciones_data.append([f"{dca.componente.nombre} — {dca.accion.nombre}", f"${dca.precio_mano_obra or 0:,}"])
+        total_mo += dca.precio_mano_obra or 0
+    acciones_data.append(["Total Mano de Obra", f"${total_mo:,}"])
+
+    acciones_table = Table(acciones_data, colWidths=[290, 100])  # Ajustar colWidths
+    acciones_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('SIZE', (0, 0), (-1, 0), 14),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(acciones_table)
+    elements.append(Spacer(1, 12))
+
+    # Tabla de Repuestos
+    repuestos_data = [["Repuesto", "Cantidad", "Unitario", "Precio"]]
+    total_rep = 0
+    for dr in diag.repuestos.all():
+        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
+        repuestos_data.append([dr.repuesto.nombre, dr.cantidad, f"${dr.precio_unitario:,}", f"${subtotal:,}"])
+        total_rep += subtotal
+    repuestos_data.append(["Total Repuestos", "", "", f"${total_rep:,}"])
+
+    repuestos_table = Table(repuestos_data, colWidths=[150, 70, 70, 100])  # Ajustar colWidths
+    repuestos_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('SIZE', (0, 0), (-1, 0), 14),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+    elements.append(repuestos_table)
+    elements.append(Spacer(1, 12))
+
+    # Total Presupuesto
+    total_presupuesto = total_mo + total_rep
+    elements.append(Paragraph(f"<b>TOTAL PRESUPUESTO: ${total_presupuesto:,}</b>", styles["Heading2"]))
+
+    doc.build(elements)
+    return response
