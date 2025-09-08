@@ -206,6 +206,8 @@
     document.addEventListener("DOMContentLoaded", function() {
   const btn = document.getElementById("toggle-dark");
 
+  if (!btn) return;  // 👈 Si el botón no existe, no hace nada
+
   // Restaurar preferencia guardada
   if (localStorage.getItem("theme") === "dark") {
     document.body.classList.add("dark-mode");

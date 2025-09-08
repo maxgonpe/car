@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from decimal import Decimal
 from django.utils.text import slugify
+from django.utils.crypto import get_random_string
 
 # Create your models here.
 class Cliente(models.Model):
@@ -191,6 +192,47 @@ class Repuesto(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
 
+    def save(self, *args, **kwargs):
+        if not self.sku:
+            self.sku = self.generate_sku()
+        super().save(*args, **kwargs)
+
+    def generate_sku(self):
+        # === Diccionario opcional de prefijos conocidos ===
+        prefijos = {
+            "freno": "FRE",
+            "filtro": "FIL",
+            "aceite": "OIL",
+            "bujía": "BUJ",
+            "batería": "BAT",
+            "amortiguador": "AMO",
+            "correa": "COR",
+            "embrague": "EMB",
+        }
+
+        # === Detectar prefijo ===
+        base_text = f"{self.nombre} {self.posicion}".lower()
+        tipo = None
+        for k, v in prefijos.items():
+            if k in base_text:
+                tipo = v
+                break
+
+        if not tipo:
+            # Si no hay prefijo definido, tomar primeras letras del nombre
+            tipo = (self.nombre[:3].upper() if self.nombre else "GEN")
+
+        # === Marca abreviada ===
+        marca = (self.marca[:3].upper() if self.marca else "GEN")
+
+        # === Posición o componente abreviado ===
+        comp = (self.posicion[:3].upper() if self.posicion else "REP")
+
+        # === Secuencia aleatoria numérica (4 dígitos) ===
+        referencia = get_random_string(length=4, allowed_chars="0123456789")
+
+        return f"{tipo}-{marca}-{comp}-{referencia}"
+
 class VehiculoVersion(models.Model):
     marca = models.CharField(max_length=80)
     modelo = models.CharField(max_length=120)
@@ -256,5 +298,7 @@ class DiagnosticoRepuesto(models.Model):
     reservado = models.BooleanField(default=False)  # si fue reservado en stock
     creado = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.repuesto} (x{self.cantidad})"
 
 

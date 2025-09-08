@@ -13,12 +13,14 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models import Q
 from .models import Diagnostico, Cliente, Vehiculo,\
                     Componente, Accion, ComponenteAccion,\
-                    DiagnosticoComponenteAccion
+                    DiagnosticoComponenteAccion, Repuesto, VehiculoVersion,\
+                    DiagnosticoRepuesto
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
                    DiagnosticoForm, AccionForm, ComponenteAccionForm
 
@@ -52,7 +54,7 @@ def componente_list(request):
     })
 
 
-
+@transaction.atomic
 def ingreso_view(request):
     clientes_existentes = Cliente.objects.all().order_by('nombre')
 
@@ -86,7 +88,6 @@ def ingreso_view(request):
         vehiculo = None
         if vehiculo_id:
             try:
-                # Validar que pertenezca al cliente seleccionado
                 vehiculo = Vehiculo.objects.get(pk=vehiculo_id, cliente=cliente)
                 selected_vehiculo = vehiculo.pk
             except Vehiculo.DoesNotExist:
@@ -104,59 +105,96 @@ def ingreso_view(request):
             diagnostico.vehiculo = vehiculo
             diagnostico.save()
 
-            # M2M de componentes desde los checkboxes originales
+            # 🔹 Relación M2M con componentes
             diagnostico.componentes.set(selected_componentes_ids)
 
-            # ============ NUEVO: Acciones por componente desde el hidden JSON ============
+            # ====================================================
+            # 🔹 Acciones por componente desde hidden JSON
             acciones_json = (request.POST.get("acciones_componentes_json") or "").strip()
             if acciones_json:
                 try:
                     items = json.loads(acciones_json)
-                    # items: [{componente_id, accion_id, precio}, ...]
-                    with transaction.atomic():
-                        for it in items:
-                            try:
-                                comp_id = int(it.get("componente_id"))
-                                acc_id = int(it.get("accion_id"))
-                            except (TypeError, ValueError):
-                                continue
+                    for it in items:
+                        try:
+                            comp_id = int(it.get("componente_id"))
+                            acc_id = int(it.get("accion_id"))
+                        except (TypeError, ValueError):
+                            continue
 
-                            precio = (it.get("precio") or "").strip()
+                        precio = (it.get("precio") or "").strip()
 
-                            # Garantiza que el componente exista en el M2M del diagnóstico
-                            if not diagnostico.componentes.filter(id=comp_id).exists():
-                                # Si prefieres forzar el add, descomenta la siguiente línea:
-                                # diagnostico.componentes.add(comp_id)
-                                continue
+                        if not diagnostico.componentes.filter(id=comp_id).exists():
+                            continue  # ignora acciones de componentes no seleccionados
 
-                            dca = DiagnosticoComponenteAccion(
-                                diagnostico=diagnostico,
-                                componente_id=comp_id,
-                                accion_id=acc_id,
-                            )
-                            # Si se ingresó precio manual válido, úsalo; si no, deja que el save() autocomplemente (si lo implementaste)
-                            if precio and precio not in ("0", "0.00"):
-                                dca.precio_mano_obra = precio
-                            dca.save()
+                        dca = DiagnosticoComponenteAccion(
+                            diagnostico=diagnostico,
+                            componente_id=comp_id,
+                            accion_id=acc_id,
+                        )
+                        if precio and precio not in ("0", "0.00"):
+                            dca.precio_mano_obra = precio
+                        dca.save()
                 except json.JSONDecodeError:
-                    # JSON malformado: lo ignoramos para no romper el flujo
                     pass
-            # ============================================================================
+            
+            # ====================================================
+
+            # ====================================================
+            # 🔹 Repuestos seleccionados desde hidden JSON
+            # ====================================================
+            # 🔹 Repuestos seleccionados desde hidden JSON
+            repuestos_json = (request.POST.get("repuestos_json") or "").strip()
+            print("1 Antesss")
+            print("2 DEBUG repuestos_json:", repr(repuestos_json))
+            if repuestos_json:
+                try:
+                    repuestos_data = json.loads(repuestos_json)
+                    for r in repuestos_data:
+                        try:
+                            repuesto_id = int(r.get("id"))
+                            repuesto = Repuesto.objects.get(pk=repuesto_id)
+
+                            stock_id_raw = r.get("repuesto_stock_id")
+                            repuesto_stock = None
+                            if stock_id_raw:
+                                try:
+                                    repuesto_stock = RepuestoEnStock.objects.get(pk=int(stock_id_raw))
+                                except (ValueError, RepuestoEnStock.DoesNotExist):
+                                    repuesto_stock = None
+
+                            cantidad = int(r.get("cantidad", 1))
+                            precio = float(r.get("precio_unitario", repuesto.precio_venta or 0))
+
+                            DiagnosticoRepuesto.objects.create(
+                                diagnostico=diagnostico,
+                                repuesto=repuesto,
+                                repuesto_stock=repuesto_stock,
+                                cantidad=cantidad,
+                                precio_unitario=precio,
+                                subtotal=cantidad * precio
+                            )
+                            print("DEBUG repuestos_json:", repr(repuestos_json))
+                        except (ValueError, Repuesto.DoesNotExist, KeyError):
+                            continue
+                except json.JSONDecodeError:
+                    print("3 pasando por el pass")
+                    print("4 DEBUG repuestos_json:", repr(repuestos_json))
+                    pass
+            print("5 DEBUG repuestos_json:", repr(repuestos_json))
+# ====================================================
+
+            # ====================================================
 
             messages.success(request, "Ingreso guardado correctamente.")
             return redirect('panel_principal')
-        else:
-            # Opcional: debug
-            # print("Form diag errors:", diagnostico_form.errors)
-            pass
+
+        # else → si hay errores, sigue abajo y vuelve a renderizar
 
     else:
         cliente_form = ClienteForm(prefix='cliente')
         vehiculo_form = VehiculoForm(prefix='vehiculo')
         diagnostico_form = DiagnosticoForm(prefix='diag')
 
-    # 🚫 Importante: en la carga inicial no mandes todos los vehículos.
-    # Deja el select vacío y que el JS lo cargue según el cliente.
     vehiculos_existentes = Vehiculo.objects.none()
 
     # cargar motor.svg como string
@@ -173,7 +211,7 @@ def ingreso_view(request):
         'vehiculo_form': vehiculo_form,
         'diagnostico_form': diagnostico_form,
         'clientes_existentes': clientes_existentes,
-        'vehiculos_existentes': vehiculos_existentes,  # vacío; se llenará por AJAX
+        'vehiculos_existentes': vehiculos_existentes,
         'selected_cliente': selected_cliente,
         'selected_vehiculo': selected_vehiculo,
         'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
@@ -182,96 +220,6 @@ def ingreso_view(request):
     })
 
 
-def ingreso_view2(request):
-    clientes_existentes = Cliente.objects.all().order_by('nombre')
-
-    selected_cliente = None
-    selected_vehiculo = None
-    selected_componentes_ids = []
-
-    if request.method == 'POST':
-        cliente_form = ClienteForm(request.POST, prefix='cliente')
-        vehiculo_form = VehiculoForm(request.POST, prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(request.POST, prefix='diag')
-
-        cliente_id = request.POST.get('cliente_existente')
-        vehiculo_id = request.POST.get('vehiculo_existente')
-        selected_componentes_ids = request.POST.getlist('componentes_seleccionados')
-
-        # --- Cliente ---
-        cliente = None
-        if cliente_id:
-            try:
-                cliente = Cliente.objects.get(pk=cliente_id)
-                selected_cliente = cliente.pk
-            except Cliente.DoesNotExist:
-                cliente_form.add_error(None, "El cliente seleccionado no existe.")
-        else:
-            if cliente_form.is_valid():
-                cliente = cliente_form.save()
-                selected_cliente = cliente.pk
-
-        # --- Vehículo ---
-        vehiculo = None
-        if vehiculo_id:
-            try:
-                # Validar que pertenezca al cliente seleccionado
-                vehiculo = Vehiculo.objects.get(pk=vehiculo_id, cliente=cliente)
-                selected_vehiculo = vehiculo.pk
-            except Vehiculo.DoesNotExist:
-                vehiculo_form.add_error(None, "El vehículo seleccionado no existe o no pertenece al cliente.")
-        else:
-            if vehiculo_form.is_valid() and cliente:
-                vehiculo = vehiculo_form.save(commit=False)
-                vehiculo.cliente = cliente
-                vehiculo.save()
-                selected_vehiculo = vehiculo.pk
-
-        # --- Diagnóstico ---
-        if diagnostico_form.is_valid() and vehiculo:
-            diagnostico = diagnostico_form.save(commit=False)
-            diagnostico.vehiculo = vehiculo
-            diagnostico.save()
-            diagnostico.componentes.set(selected_componentes_ids)
-            messages.success(request, "Ingreso guardado correctamente.")
-            return redirect('panel_principal')
-        else:
-            # Opcional: debug
-            # print("Form diag errors:", diagnostico_form.errors)
-            pass
-
-    else:
-        cliente_form = ClienteForm(prefix='cliente')
-        vehiculo_form = VehiculoForm(prefix='vehiculo')
-        diagnostico_form = DiagnosticoForm(prefix='diag')
-
-    # 🚫 Importante: en la carga inicial no mandes todos los vehículos.
-    # Deja el select vacío y que el JS lo cargue según el cliente.
-    vehiculos_existentes = Vehiculo.objects.none()
-
-    
-    # cargar motor.svg como string
-    svg_path = os.path.join(settings.BASE_DIR, "static", "images", "vehiculo-desde-abajo.svg")
-    svg_content = ""
-    try:
-        with open(svg_path, "r", encoding="utf-8") as f:
-            svg_content = f.read()
-    except FileNotFoundError:
-        pass
-
-
-    return render(request, 'car/ingreso.html', {
-        'cliente_form': cliente_form,
-        'vehiculo_form': vehiculo_form,
-        'diagnostico_form': diagnostico_form,
-        'clientes_existentes': clientes_existentes,
-        'vehiculos_existentes': vehiculos_existentes,  # vacío; se llenará por AJAX
-        'selected_cliente': selected_cliente,
-        'selected_vehiculo': selected_vehiculo,
-        'componentes': Componente.objects.filter(padre__isnull=True, activo=True),
-        'selected_componentes_ids': selected_componentes_ids,
-        'svg': svg_content,
-    })
 
 
 
@@ -607,31 +555,53 @@ def comp_accion_delete(request, pk):
 # funciones adicionales para incluir repuestos
 
 
-def sugerir_repuestos(request, diagnostico_id):
-    diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
-    veh = diag.vehiculo
-    componentes_ids = list(diag.componentes.values_list('id', flat=True))
+def sugerir_repuestos(request, diagnostico_id=None):
+    """
+    Vista única:
+    - Si viene diagnostico_id: usa los datos guardados en la BD.
+    - Si NO viene diagnostico_id: usa los datos enviados por el request (preview).
+    """
+    print("entrando a buscar repuestos")
 
-    # 1) buscar repuestos vinculados directamente al componente
+    componentes_ids = []
+    veh_marca = veh_modelo = None
+    veh_anio = None
+
+    if diagnostico_id:  # 🔹 MODO "DIAGNÓSTICO GUARDADO"
+        diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
+        veh = diag.vehiculo
+        veh_marca, veh_modelo, veh_anio = veh.marca, veh.modelo, veh.anio
+        componentes_ids = list(diag.componentes.values_list('id', flat=True))
+
+    else:  # 🔹 MODO "PREVIEW" (sin diagnóstico guardado)
+        componentes_ids = request.GET.getlist("componentes_ids", [])
+        veh_marca = request.GET.get("marca")
+        veh_modelo = request.GET.get("modelo")
+        veh_anio = request.GET.get("anio")
+
+    # 1) buscar repuestos vinculados directamente a los componentes
     repuestos_comp = Repuesto.objects.filter(
         componenterepuesto__componente_id__in=componentes_ids
     ).distinct()
+    print("buscando en punto 1 ",repuestos_comp)
 
-    # 2) filtrar por compatibilidad con versión del vehículo (si existe)
-    version = VehiculoVersion.objects.filter(
-        marca__iexact=veh.marca, modelo__iexact=veh.modelo,
-        anio_desde__lte=veh.anio, anio_hasta__gte=veh.anio
-    ).first()
+    # 2) compatibilidad con versión del vehículo
+    candidates = repuestos_comp
+    if veh_marca and veh_modelo and veh_anio:
+        version = VehiculoVersion.objects.filter(
+            marca__iexact=veh_marca.strip(),
+            modelo__iexact=veh_modelo.strip(),
+            anio_desde__lte=veh_anio,
+            anio_hasta__gte=veh_anio
+        ).first()
+        if version:
+            repuestos_by_version = Repuesto.objects.filter(aplicaciones__version=version).distinct()
+            candidates = (repuestos_comp | repuestos_by_version).distinct()
 
-    if version:
-        repuestos_by_version = Repuesto.objects.filter(aplicaciones__version=version).distinct()
-        candidates = (repuestos_comp | repuestos_by_version).distinct()
-    else:
-        candidates = repuestos_comp
-
-    # 3) enriquecer con stock y precio (repuesto_en_stock)
+    print("resultado del punto 2 ",candidates)        
+    # 3) enriquecer con stock y precio
     resultados = []
-    for r in candidates.select_related().order_by('nombre')[:60]:
+    for r in candidates.select_related().order_by("nombre")[:60]:
         stock_obj = r.stocks.order_by('-ultima_actualizacion').first()
         resultados.append({
             "id": r.id,
@@ -644,16 +614,29 @@ def sugerir_repuestos(request, diagnostico_id):
             "disponible": stock_obj.disponible if stock_obj else 0,
             "repuesto_stock_id": stock_obj.id if stock_obj else None,
         })
-
+    print("resultados del punto 3 ",resultados)
     return JsonResponse({"repuestos": resultados})
 
 
+
+@csrf_exempt
 def agregar_repuesto(request, diagnostico_id):
-    # POST {repuesto_id, repuesto_stock_id, cantidad}
+    """
+    Agrega un repuesto al diagnóstico y, si hay stock, lo reserva.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Método no permitido"}, status=405)
+
     diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
-    repuesto_id = request.POST.get('repuesto_id')
-    stock_id = request.POST.get('repuesto_stock_id')
-    cantidad = int(request.POST.get('cantidad', 1))
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        return JsonResponse({"error": "JSON inválido"}, status=400)
+
+    repuesto_id = data.get("repuesto_id")
+    stock_id = data.get("repuesto_stock_id")
+    cantidad = int(data.get("cantidad", 1))
 
     rep = get_object_or_404(Repuesto, pk=repuesto_id)
 
@@ -663,20 +646,52 @@ def agregar_repuesto(request, diagnostico_id):
             repstk = RepuestoEnStock.objects.select_for_update().get(pk=stock_id)
             if repstk.disponible < cantidad:
                 return JsonResponse({"error": "Stock insuficiente"}, status=400)
-            # reservar temporalmente
+            # Reservar
             repstk.reservado = (repstk.reservado or 0) + cantidad
             repstk.save()
             StockMovimiento.objects.create(
                 repuesto_stock=repstk, tipo='reserva', cantidad=cantidad,
-                motivo='Reserva desde diagnóstico', referencia=f'DIAG-{diag.id}', usuario=request.user
+                motivo='Reserva desde diagnóstico',
+                referencia=f'DIAG-{diag.id}', usuario=request.user if request.user.is_authenticated else None
             )
 
         dr = DiagnosticoRepuesto.objects.create(
-            diagnostico=diag, repuesto=rep, repuesto_stock=repstk,
+            diagnostico=diag,
+            repuesto=rep,
+            repuesto_stock=repstk,
             cantidad=cantidad,
-            precio_unitario = repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta,
-            subtotal = (repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta) * cantidad,
-            reservado = bool(repstk)
+            precio_unitario=repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta,
+            subtotal=(repstk.precio_venta if repstk and repstk.precio_venta else rep.precio_venta or 0) * cantidad,
+            reservado=bool(repstk)
         )
 
     return JsonResponse({"ok": True, "dr_id": dr.id})
+
+
+def listar_repuestos_diagnostico(request, diagnostico_id):
+    """
+    Devuelve los repuestos ya agregados a un diagnóstico en formato JSON.
+    """
+    diag = get_object_or_404(Diagnostico, pk=diagnostico_id)
+    drs = DiagnosticoRepuesto.objects.filter(diagnostico=diag).select_related("repuesto")
+
+    repuestos = []
+    total = 0
+
+    for dr in drs:
+        subtotal = (dr.precio_unitario or 0) * dr.cantidad
+        total += subtotal
+        repuestos.append({
+            "id": dr.id,
+            "repuesto_id": dr.repuesto.id,
+            "nombre": dr.repuesto.nombre,
+            "oem": dr.repuesto.oem,
+            "cantidad": dr.cantidad,
+            "precio_unitario": float(dr.precio_unitario or 0),
+            "subtotal": subtotal,
+        })
+
+    return JsonResponse({
+        "repuestos": repuestos,
+        "total": total
+    })

@@ -40,6 +40,13 @@ class DiagnosticoComponenteAccionInline(admin.TabularInline):
     extra = 1
     autocomplete_fields = ['componente', 'accion']
 
+class DiagnosticoRepuestoInline(admin.TabularInline):
+    model = DiagnosticoRepuesto
+    extra = 1  # Número de formularios vacíos que se mostrarán
+    autocomplete_fields = ['repuesto']  # Permite la búsqueda de repuestos
+
+
+
 # --- Admin de Diagnostico ---
 @admin.register(Diagnostico)
 class DiagnosticoAdmin(admin.ModelAdmin):
@@ -50,7 +57,7 @@ class DiagnosticoAdmin(admin.ModelAdmin):
         'vehiculo__marca',
         'componentes__nombre',
     )
-    inlines = [DiagnosticoComponenteAccionInline]
+    inlines = [DiagnosticoComponenteAccionInline, DiagnosticoRepuestoInline]
 
 # --- Admin de Vehiculo ---
 @admin.register(Vehiculo)
@@ -64,11 +71,18 @@ class ClienteAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'telefono')
     search_fields = ('nombre', 'telefono')
 
+class RepuestoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'sku', 'oem','referencia','nombre','precio_costo','precio_venta')
+    search_fields = ('nombre',) 
+    
+class ComponenteRepuestoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'componente', 'repuesto','nota')
+
 admin.site.register(DiagnosticoComponenteAccion)
-admin.site.register(Repuesto)
+admin.site.register(Repuesto,RepuestoAdmin)
 admin.site.register(RepuestoEnStock)
 admin.site.register(DiagnosticoRepuesto)
 admin.site.register(StockMovimiento)
 admin.site.register(VehiculoVersion)
-admin.site.register(ComponenteRepuesto)
+admin.site.register(ComponenteRepuesto,ComponenteRepuestoAdmin)
 admin.site.register(RepuestoAplicacion)

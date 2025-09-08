@@ -2,9 +2,8 @@
 {% block content %}
 <h2>Diagnosticos</h2>
 
-<a href="" class="btn  btn-success mb-3">Descargar Excel</a>
-    <a href="" class="btn btn-danger mb-3">Descargar PDF</a>
-
+<a href="" class="btn btn-success mb-3">Descargar Excel</a>
+<a href="" class="btn btn-danger mb-3">Descargar PDF</a>
 
 <input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar por vehiculo, cliente, telefono, diagnostico, partes...">
 
@@ -22,34 +21,66 @@
                 Ninguno
             {% endfor %}
             <br>
-        <!-- ==== Acciones y Mano de Obra ==== -->
+
+<!-- ==== Acciones y Mano de Obra ==== -->
 <strong>Acciones realizadas:</strong><br>
 {% with diagnostico.acciones_componentes.all as acciones %}
-    {% if acciones %}
+{% if acciones %}
+<ul class="list-group list-group-flush my-2">
+{% for dca in acciones %}
+<li class="list-group-item d-flex justify-content-between align-items-center">
+<span>
+    <strong>{{ dca.componente.nombre }}</strong> — {{ dca.accion.nombre }}
+</span>
+<span class="badge bg-primary rounded-pill">
+    ${{ dca.precio_mano_obra|floatformat:0 }}
+</span>
+</li>
+{% endfor %}
+    </ul>
+                <div class="text-end fw-bold">
+                    Total mano de obra: 
+                    ${{ diagnostico.total_mano_obra|default:0|floatformat:0 }}
+                </div>
+            {% else %}
+                <span class="text-muted">No se registraron acciones</span>
+            {% endif %}
+        {% endwith %}
+
+        <!-- ==== Repuestos ==== -->
+        <strong>Repuestos utilizados:</strong><br>
+        
+        <strong>Repuestos utilizados:</strong><br>
+{% with diagnostico.repuestos.all as repuestos %}
+    {% if repuestos %}
         <ul class="list-group list-group-flush my-2">
-            {% for dca in acciones %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <span>
-                        <strong>{{ dca.componente.nombre }}</strong> — {{ dca.accion.nombre }}
-                    </span>
-                    <span class="badge bg-primary rounded-pill">
-                        ${{ dca.precio_mano_obra|floatformat:0 }}
-                    </span>
-                </li>
-            {% endfor %}
-        </ul>
-        <div class="text-end fw-bold">
-            Total mano de obra: 
-            ${{ diagnostico.total_mano_obra|default:0|floatformat:0 }}
-        </div>
+            {% with total_repuestos=0 %}
+                {% for dr in repuestos %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>{{ dr.repuesto.nombre }}</strong> (x{{ dr.cantidad }})
+                        </span>
+                        <span class="badge bg-primary rounded-pill">
+                            ${{ dr.precio_unitario|floatformat:0 }} 
+                        </span>
+                    </li>
+                    {% with total_repuestos=total_repuestos|add:dr.subtotal %}
+                    {% endwith %}
+                {% endfor %}
+            </ul>
+            <div class="text-end fw-bold">
+                Total repuestos: 
+                ${{ total_repuestos|default:0|floatformat:0 }}
+            </div>
+        {% endwith %}
     {% else %}
-        <span class="text-muted">No se registraron acciones</span>
+        <span class="text-muted">No se registraron repuestos</span>
     {% endif %}
 {% endwith %}
 
-            
+        
 
-                <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
+        <strong>Ultima Visita:</strong> {{ diagnostico.fecha }}<br>
 
         <a href="" class="btn btn-sm btn-secondary mt-2">Editar</a>
         <a href="{% url 'eliminar_diagnostico' diagnostico.pk %}" class="btn btn-sm btn-danger mt-2">Eliminar</a>
