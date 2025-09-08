@@ -6,7 +6,7 @@
 <div class="container py-4">
   <h2>Ingreso de Diagnóstico</h2>
 
-  <form method="post" novalidate>
+  <form id="form-ingreso" method="post" novalidate>
     {% csrf_token %}
 
     <!-- ---------------- CLIENTE ---------------- -->
@@ -47,7 +47,41 @@
       <!-- Columna izquierda: acordeón -->
       <div class="col-md-6 border-end">
         <h5>Seleccionar por lista</h5>
-        {% include 'car/componentes_acordeon.html' with componentes=componentes selected_componentes_ids=selected_componentes_ids %}
+
+        <div class="accordion" id="componentesAccordion">
+          {% for padre in componentes %}
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="heading-{{ padre.id }}">
+                <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapse-{{ padre.id }}"
+                        aria-expanded="false" aria-controls="collapse-{{ padre.id }}">
+                  {{ padre.nombre }}
+                </button>
+              </h2>
+              <div id="collapse-{{ padre.id }}" class="accordion-collapse collapse"
+                   aria-labelledby="heading-{{ padre.id }}" data-bs-parent="#componentesAccordion">
+                <div class="accordion-body">
+                  {% for hijo in padre.hijos.all %}
+                    <div class="form-check">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             name="componentes_seleccionados"
+                             value="{{ hijo.id }}"
+                             id="comp-{{ hijo.id }}"
+                             data-nombre="{{ hijo.nombre }}"
+                             {% if hijo.id in selected_componentes_ids %}checked{% endif %}>
+                      <label class="form-check-label" for="comp-{{ hijo.id }}">
+                        {{ hijo.nombre }}
+                      </label>
+                    </div>
+                  {% empty %}
+                    <p class="text-muted small">No hay subcomponentes registrados.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
       </div>
 
       <!-- Columna derecha: plano SVG -->
@@ -56,7 +90,8 @@
         <button id="btn-reset-plano" type="button" class="btn btn-sm btn-outline-secondary mb-2">
           ⬅️ Volver al plano inicial
         </button>
-        <div id="plano-container" 
+
+        <div id="plano-container"
              style="border:1px solid #ccc; max-height:100%; overflow:auto;"
              data-inicial-url="{% static 'images/vehiculo-desde-abajo.svg' %}">
           <div style="transform:scale(0.9); transform-origin: top left;">
@@ -68,6 +103,48 @@
         <div id="componentes-seleccionados" class="mt-3">
           <h6>Componentes seleccionados:</h6>
           <ul id="lista-seleccionados" class="list-group small"></ul>
+
+          <!-- ====== BLOQUE ACCIONES ====== -->
+          <div class="card mt-2">
+            <div class="card-body p-2">
+              <h3 class="h6">Acciones para componentes seleccionados</h3>
+              <ul id="acciones-para-componentes" class="list-group list-group-flush small"></ul>
+              <input type="hidden" id="acciones_componentes_json" name="acciones_componentes_json" value="[]">
+              <div class="d-flex justify-content-end mt-2">
+                <div class="text-end">
+                  <div class="small text-muted">Total mano de obra</div>
+                  <div class="fw-bold" id="total_mano_obra">$0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- ====== FIN BLOQUE ACCIONES ====== -->
+
+          <!-- ====== BLOQUE REPUESTOS (meta + botones) ====== -->
+          <!-- Un solo diagnostico-meta en el template -->
+          <div id="diagnostico-meta"
+               data-diagnostico-id="{{ diagnostico.id|default:'' }}"
+               data-csrf="{{ csrf_token }}">
+          </div>
+
+          <hr>
+          <h3>🔧 Repuestos sugeridos</h3>
+          <button type="button" class="btn btn-outline-primary mb-2" onclick="cargarRepuestos()">
+            Buscar repuestos sugeridos
+          </button>
+
+          <!-- Un solo contenedor #repuestos-list -->
+          <div id="repuestos-list"
+               data-preview-url="{% url 'sugerir_repuestos_preview' %}"
+               data-with-id-template="{% url 'sugerir_repuestos' 0 %}">
+            <p class="text-muted">Aquí aparecerán los repuestos sugeridos.</p>
+          </div>
+
+          <hr>
+          <h4>🧾 Repuestos agregados al diagnóstico</h4>
+          <div id="tabla-contenido"></div>
+          <!-- ====== FIN BLOQUE REPUESTOS ====== -->
+
         </div>
       </div>
     </div>
@@ -76,101 +153,32 @@
       <label class="form-label">Descripción del problema:</label>
       {{ diagnostico_form|crispy }}
     </div>
+    <!-- hidden que envía los repuestos seleccionados -->
+    <input type="hidden" name="repuestos_json" id="repuestos-json">
+
 
     <button type="submit" class="btn btn-primary">Guardar</button>
+    <!--button type="submit" class="btn btn-primary" onclick="prepararRepuestosParaEnvio()">Guardar</button-->
+
     <a href="{% url 'panel_principal' %}" class="btn btn-sm btn-warning">Regresar</a>
   </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  // ---------------- CLIENTE ----------------
-  const clienteSelect  = document.getElementById('cliente_existente');
-  const nuevoClienteCampos = document.getElementById('nuevo_cliente_campos');
+<!-- Punto de referencia para build de endpoints (una sola vez) -->
+<div id="acciones-endpoints" data-acciones-url-template="{% url 'acciones_por_componente' 0 %}"></div>
 
-  function toggleClienteCampos() {
-    if (!nuevoClienteCampos) return;
-    nuevoClienteCampos.style.display = clienteSelect && clienteSelect.value ? 'none' : 'block';
-  }
+<div id="componentes-endpoints"
+     data-lookup-url="{% url 'componentes_lookup' %}">
+</div>
 
-  // ---------------- VEHÍCULO ----------------
-  const vehiculoSelect = document.getElementById('vehiculo_select');
-  const vehiculoFields = document.getElementById('vehiculo_fields');
-
-  function toggleVehiculoCampos() {
-    vehiculoFields.style.display = vehiculoSelect.value ? 'none' : 'block';
-  }
-
-  async function cargarVehiculos(clienteId, selectedVehiculoId = null) {
-    vehiculoSelect.innerHTML = '<option value="">-- Nuevo vehículo --</option>';
-    if (!clienteId) { toggleVehiculoCampos(); return; }
-    const res = await fetch(`/api/vehiculos/${clienteId}/`);
-    const data = await res.json();
-    data.forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v.id;
-      opt.textContent = `${v.placa} • ${v.marca} ${v.modelo} (${v.anio})`;
-      if (selectedVehiculoId && String(v.id) === String(selectedVehiculoId)) {
-        opt.selected = true;
-      }
-      vehiculoSelect.appendChild(opt);
-    });
-    toggleVehiculoCampos();
-  }
-
-  // Eventos cliente
-  if (clienteSelect) {
-    clienteSelect.addEventListener('change', () => {
-      toggleClienteCampos();
-      cargarVehiculos(clienteSelect.value);
-      vehiculoSelect.value = '';
-      toggleVehiculoCampos();
-    });
-    toggleClienteCampos();
-  }
-
-  // Eventos vehículo
-  if (vehiculoSelect) {
-    vehiculoSelect.addEventListener('change', toggleVehiculoCampos);
-    if (clienteSelect && clienteSelect.value) {
-      cargarVehiculos(clienteSelect.value, vehiculoSelect.dataset.selected);
-    } else {
-      toggleVehiculoCampos();
-    }
-  }
-
-  // ---------------- COMPONENTES SELECCIONADOS ----------------
-  const listaSeleccionados = document.getElementById("lista-seleccionados");
-
-  function actualizarListaSeleccionados() {
-    listaSeleccionados.innerHTML = "";
-    document.querySelectorAll('input[name="componentes_seleccionados"]:checked').forEach(cb => {
-      const li = document.createElement("li");
-      li.className = "list-group-item py-1";
-      li.textContent = cb.dataset.nombre || `ID ${cb.value}`;
-      listaSeleccionados.appendChild(li);
-    });
-  }
-
-  // Escuchar cambios en acordeón
-  document.querySelectorAll('input[name="componentes_seleccionados"]').forEach(cb => {
-    cb.addEventListener("change", actualizarListaSeleccionados);
-  });
-  actualizarListaSeleccionados();
-
-  // ---------------- BOTÓN RESET PLANO ----------------
-  const btnResetPlano = document.getElementById("btn-reset-plano");
-  btnResetPlano?.addEventListener("click", () => {
-    const cont = document.getElementById("plano-container");
-    const url = cont.dataset.inicialUrl;
-    cont.innerHTML = `<object type="image/svg+xml" data="${url}" class="w-100"></object>`;
-  });
-
-  
+<div id="repuestos-endpoints"
+     data-preview-url="{% url 'sugerir_repuestos_preview' %}"
+     data-with-id-template="{% url 'sugerir_repuestos' 0 %}">
+</div>
 
 
-  
-});
-</script>
+
+<!-- ---------------- SCRIPTS (TODO integrado aquí) ---------------- -->
+<script src="{% static 'js/ingreso.js' %}"></script>
 
 {% endblock %}

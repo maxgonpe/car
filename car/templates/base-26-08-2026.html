@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es" class="h-100">
+{% load static %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Taller Mecánico{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Espacio para estilos por página -->
+  {% block extra_head %}
+  <style>
+    /* Tipografía y layout base */
+    html, body { height: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+
+    /* Navbar pegajosa en móvil */
+    .app-navbar { position: sticky; top: 0; z-index: 1020; }
+
+    /* Mensajes Django con espacio */
+    .messages { margin-top: .75rem; }
+
+    /* -------- details/summary accesible y sin doble marcador -------- */
+    details summary {
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      position: relative;
+      padding-left: 1.25rem;
+      outline: none;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::marker { content: ""; }
+
+    details summary::before {
+      content: "►";
+      position: absolute;
+      left: 0;
+      top: .1rem;
+      font-size: .9em;
+      transition: transform .2s ease;
+    }
+    details[open] > summary::before {
+      content: "▼";
+      transform: translateY(0);
+    }
+
+    /* Focus visible */
+    details summary:focus-visible,
+    [tabindex]:focus-visible,
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(20, 47, 109, .35);
+      outline-offset: 2px;
+      border-radius: .5rem;
+    }
+
+    #plano-container svg [data-part] { cursor: pointer; }
+    #plano-container svg [data-part]:hover {
+      outline: 2px dashed rgba(0,0,0,.15);
+      outline-offset: 2px;
+    }
+
+    #plano-container svg { width:100%; height:auto; display:block; }
+
+    /* -------- MODO OSCURO -------- */
+    .dark-mode {
+      background-color: #121212 !important;
+      color: #e0e0e0 !important;
+    }
+    .dark-mode .navbar {
+      background-color: #1e1e1e !important;
+    }
+    .dark-mode .card {
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+    }
+    .dark-mode footer {
+      background-color: #1e1e1e !important;
+      color: #aaa !important;
+    }
+    .dark-mode h2, 
+    .dark-mode h5, 
+    .dark-mode h6 {
+      color: #e0e0e0 !important;
+    }
+  </style>
+  {% endblock %}
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+  <!-- Navbar -->
+  <nav class="navbar navbar-light bg-light app-navbar border-bottom">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-semibold" href="/">Taller Mecánico</a>
+      <div class="d-flex gap-2">
+        
+
+        
+        <!-- Botón de modo oscuro -->
+        <button id="toggle-dark" type="button" class="btn btn-sm btn-outline-secondary">
+          🌙 Modo oscuro
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenido -->
+  <main class="flex-grow-1">
+    <div class="container">
+      <!-- Mensajes Django -->
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Footer mínimo -->
+  <footer class="mt-auto py-3 bg-light border-top">
+    <div class="container text-center text-muted small">
+      © {{ now|date:"Y" }} Taller Mecánico
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Habilitar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      new bootstrap.Tooltip(el);
+    });
+
+    // Helper CSRF
+    (function() {
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+      window.getCsrfToken = function() { return getCookie('csrftoken'); };
+      window.fetchWithCsrf = function(url, options={}) {
+        const method = (options.method || 'GET').toUpperCase();
+        const safe = ['GET','HEAD','OPTIONS','TRACE'].includes(method);
+        const headers = new Headers(options.headers || {});
+        if (!safe) headers.set('X-CSRFToken', getCookie('csrftoken') || '');
+        return fetch(url, { ...options, headers });
+      };
+    })();
+
+    // -------- Script de modo oscuro --------
+    document.addEventListener("DOMContentLoaded", function() {
+      const btn = document.getElementById("toggle-dark");
+      btn.addEventListener("click", function() {
+        document.body.classList.toggle("dark-mode");
+        btn.textContent = document.body.classList.contains("dark-mode") 
+          ? "☀️ Modo claro" : "🌙 Modo oscuro";
+      });
+    });
+  </script>
+
+  <!-- Espacio para scripts por página -->
+  {% block extra_js %}
+    <script src="{% static 'js/plano-interactivo.js' %}"></script>
+  {% endblock %}
+</body>
+</html>
