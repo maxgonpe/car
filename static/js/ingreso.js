@@ -546,7 +546,10 @@ if (form) {
     // para que el submit vuelva a funcionar normalmente
   });
 }
+// ---------------------- BUSCAR VEHICULO POR PLACA ----------------------
 
 
+
+//
 }); // fin DOMContentLoaded
 

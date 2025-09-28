@@ -1,0 +1,144 @@
+<style>
+  .pizarra-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 1rem;
+    height: 80vh;
+  }
+  .pizarra-cell {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #fdfdfd;
+  }
+  .pizarra-cell h4 {
+    text-align: center;
+    margin-bottom: 1rem;
+    font-weight: bold;
+  }
+  .vehiculo-item {
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .vehiculo-icon {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+  }
+  .vehiculo-info {
+    flex-grow: 1;
+  }
+  .progress {
+    height: 8px;
+    margin-top: 0.3rem;
+  }
+  .placa-chile {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border: 2px solid black;
+  border-radius: 4px;
+  background-color: white;
+  color: black;
+  font-weight: bold;
+  font-family: 'Arial Black', sans-serif;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+}
+
+
+
+</style>
+
+<div class="pizarra-grid">
+  <!-- Iniciado -->
+  <div class="pizarra-cell">
+    <h4>🟡 Iniciado</h4>
+    {% for t in iniciados %}
+      <div class="vehiculo-item">
+        <a href="{% url 'trabajo_detalle' t.id %}" class="vehiculo-icon-link">
+  <span class="vehiculo-icon">🚗</span>
+</a>
+
+        <div class="vehiculo-info">
+          <span class="placa-chile">{{ t.vehiculo.placa|default:"(sin patente)" }}</span><strong> - {{ t.vehiculo.cliente.nombre }}</strong>
+          
+          <div class="progress">
+            <div class="progress-bar bg-warning" style="width: {{ t.porcentaje_avance }}%">{{ t.porcentaje_avance }}%</div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">Sin trabajos en esta etapa</p>
+    {% endfor %}
+  </div>
+
+  <!-- Trabajando -->
+  <div class="pizarra-cell">
+    <h4>🔵 Trabajando</h4>
+    {% for t in trabajando %}
+      <div class="vehiculo-item">
+        <a href="{% url 'trabajo_detalle' t.id %}" class="vehiculo-icon-link">
+  <span class="vehiculo-icon">🚙</span>
+</a>
+        
+        <div class="vehiculo-info">
+          <span class="placa-chile">{{ t.vehiculo.placa|default:"(sin patente)" }}</span><strong> - {{ t.vehiculo.cliente.nombre }}</strong>
+          <div class="progress">
+            <div class="progress-bar bg-primary" style="width: {{ t.porcentaje_avance }}%">{{ t.porcentaje_avance }}%</div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">Sin trabajos en esta etapa</p>
+    {% endfor %}
+  </div>
+
+  <!-- Completado -->
+  <div class="pizarra-cell">
+    <h4>🟢 Completado</h4>
+    {% for t in completados %}
+      <div class="vehiculo-item">
+        <a href="{% url 'trabajo_detalle' t.id %}" class="vehiculo-icon-link">
+  <span class="vehiculo-icon">🚕</span>
+</a>
+        
+        <div class="vehiculo-info">
+          <span class="placa-chile">{{ t.vehiculo.placa|default:"(sin patente)" }}</span><strong> - {{ t.vehiculo.cliente.nombre }}</strong>
+          <div class="progress">
+            <div class="progress-bar bg-success" style="width: {{ t.porcentaje_avance }}%">{{ t.porcentaje_avance }}%</div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">Sin trabajos en esta etapa</p>
+    {% endfor %}
+  </div>
+
+  <!-- Entregado -->
+  <div class="pizarra-cell">
+    <h4>⚫ Entregado</h4>
+    {% for t in entregados %}
+      <div class="vehiculo-item">
+        <a href="{% url 'trabajo_detalle' t.id %}" class="vehiculo-icon-link">
+  <span class="vehiculo-icon">🚐</span>
+</a>
+        
+        <div class="vehiculo-info">
+          <span class="placa-chile">{{ t.vehiculo.placa|default:"(sin patente)" }}</span><strong> - {{ t.vehiculo.cliente.nombre }}</strong>
+          <div class="progress">
+            <div class="progress-bar bg-dark" style="width: {{ t.porcentaje_avance }}%">{{ t.porcentaje_avance }}%</div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-muted">Sin trabajos en esta etapa</p>
+    {% endfor %}
+  </div>
+</div>

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Eliminar Vehículo</h2>
+  <p>¿Seguro que deseas eliminar el vehículo <strong>{{ object.placa }} - {{ object.marca }} {{ object.modelo }}</strong>?</p>
+  <form method="post">{% csrf_token %}
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+    <a href="{% url 'vehiculo_list' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

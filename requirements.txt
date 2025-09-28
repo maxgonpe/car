@@ -1,3 +1,4 @@
+gunicorn==23.0.0
 asgiref==3.9.1
 cairocffi==1.7.1
 CairoSVG==2.8.2
@@ -22,3 +23,4 @@ svgelements==1.9.6
 tinycss2==1.4.0
 urllib3==2.5.0
 webencodings==0.5.1
+whitenoise==6.11.0

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load humanize %}
 {% block content %}
-<h2>Diagnósticos</h2>
+<h3>Diagnósticos ➡️ Presupuestos</h3>
 
 <input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar por vehículo, cliente, teléfono, diagnóstico, partes...">
 
@@ -9,8 +9,11 @@
 <div class="card mb-3">
   <div class="card-body">
     <strong>Vehículo:</strong> {{ diagnostico.vehiculo }}<br>
+    
+    <strong>VIN:</strong> <strong style="color: red;"> {{ diagnostico.vehiculo.vin }}</strong> <br>
     <strong>Cliente:</strong> {{ diagnostico.vehiculo.cliente.nombre }}<br>
     <strong>Teléfono:</strong> {{ diagnostico.vehiculo.cliente.telefono }}<br>
+
     <strong>Diagnóstico:</strong> {{ diagnostico.descripcion_problema }}<br>
     <strong>Partes Afectadas:</strong> 
     {% for comp in diagnostico.componentes.all %}
@@ -78,18 +81,29 @@
 
     <strong>Última Visita:</strong> {{ diagnostico.fecha }}<br>
 
+    <!-- ==== Botones ==== -->
     <a href="{% url 'diagnostico_excel' diagnostico.pk %}" class="btn btn-success btn-sm mt-2">Excel</a>
     <a href="{% url 'diagnostico_pdf' diagnostico.pk %}" class="btn btn-danger btn-sm mt-2">PDF</a>
     <a href="" class="btn btn-sm btn-secondary mt-2">Editar</a>
     <a href="{% url 'eliminar_diagnostico' diagnostico.pk %}" class="btn btn-sm btn-danger mt-2">Eliminar</a>
     <a href="{% url 'panel_principal' %}" class="btn btn-sm btn-warning mt-2">Regresar</a>
+
+    <!-- ==== Botón Aceptar / Estado ==== -->
+    {% if diagnostico.estado == "pendiente" %}
+      <a href="{% url 'aprobar_diagnostico' diagnostico.pk %}" class="btn btn-sm btn-primary mt-2">
+        ✅ Aceptar
+      </a>
+    {% elif diagnostico.estado == "aprobado" %}
+      <span class="badge bg-success mt-2">Aprobado</span>
+    {% endif %}
+
   </div>
 </div>
 {% empty %}
 <p>No hay diagnósticos registrados.</p>
 {% endfor %}
 
-<a href="" class="btn btn-sm btn-warning">Regresar</a>
+<a href="{% url 'panel_principal' %}" class="btn btn-sm btn-warning">Regresar</a>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -106,4 +120,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
-

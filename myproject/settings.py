@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +27,20 @@ SECRET_KEY = 'django-insecure-o0_e96a7(r7t@_j_c0=!jp*gg06ww!23otsr8!yeb^1&0zc2o*
 DEBUG = True
 
 
-ALLOWED_HOSTS = ['94.72.119.222']
+ALLOWED_HOSTS = ['netgogo.cl',
+		 'www.netgogo.cl',
+		 '.netgogo.cl',
+		 '94.72.119.222',
+	         'localhost',
+                 '127.0.0.1'
+]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.netgogo.cl"
+]
+
+
 #ALLOWED_HOSTS = []
 
 
@@ -49,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware", 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -111,6 +126,15 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Redirigir usuarios no autenticados
+LOGIN_URL = 'login'         # nombre de la URL de tu vista de login
+LOGIN_REDIRECT_URL = 'panel_principal'  # a dónde ir después de login exitoso
+LOGOUT_REDIRECT_URL = 'login'  # opcional: a dónde mandar tras logout
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB en bytes
+
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -135,9 +159,11 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Almacén optimizado de ficheros estáticos
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
  
 #MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Ruta en el sistema de archivos
-MEDIA_URL =  'media/'
+MEDIA_ROOT =  BASE_DIR /'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

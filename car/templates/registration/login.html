@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-body p-4">
+          <h3 class="text-center mb-4">🔑 Iniciar Sesión</h3>
+
+          {% if form.errors %}
+          <div class="alert alert-danger">
+            <strong>Usuario o contraseña incorrectos.</strong><br>
+            Por favor intenta nuevamente.
+          </div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label for="id_username" class="form-label">Usuario</label>
+              <input type="text" name="username" autofocus
+                     class="form-control" id="id_username"
+                     placeholder="Ingresa tu usuario" required>
+            </div>
+
+            <div class="mb-3">
+              <label for="id_password" class="form-label">Contraseña</label>
+              <input type="password" name="password"
+                     class="form-control" id="id_password"
+                     placeholder="Ingresa tu contraseña" required>
+            </div>
+
+            <div class="d-grid mb-3">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+              </button>
+            </div>
+          </form>
+
+          <div class="text-center mt-3">
+            <small class="text-muted">
+              ¿Olvidaste tu contraseña? <a href="#">Recupérala aquí</a>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -4,6 +4,20 @@ from django.conf import settings
 from decimal import Decimal
 from django.utils.text import slugify
 from django.utils.crypto import get_random_string
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.utils.timezone import now
+
+class Mecanico(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="mecanico")
+    especialidad = models.CharField(max_length=100, blank=True, null=True)
+    fecha_ingreso = models.DateField(auto_now_add=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username}"
+
+
 
 # Create your models here.
 class Cliente(models.Model):
@@ -25,8 +39,9 @@ class Vehiculo(models.Model):
     # Motor predefinido (opcional pero útil para IA)
     descripcion_motor = models.CharField(max_length=100, blank=True, null=True)
     
-    def __str__(self):
-        return self.cliente.nombre
+    
+    #def __str__(self):
+    #    return self.cliente.nombre
 
     #def __str__(self):
     #    # Acceder al anio
@@ -36,8 +51,6 @@ class Vehiculo(models.Model):
     def __str__(self):
         return f"{self.placa} • {self.marca} {self.modelo} ({self.anio})"
 
-
-    
 
 class Componente(models.Model):
     nombre = models.CharField(max_length=100)
@@ -101,16 +114,75 @@ class Componente(models.Model):
 
 
 class Diagnostico(models.Model):
+    ESTADOS = [
+        ("pendiente", "Pendiente"),
+        ("aprobado", "Aprobado"),
+        ("rechazado", "Rechazado"),
+    ]
+
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE)
     componentes = models.ManyToManyField(Componente, related_name='diagnosticos')
     descripcion_problema = models.TextField()
     fecha = models.DateTimeField(auto_now_add=True)
     subcomponentes_sugeridos = models.JSONField(blank=True, null=True)
+    aceptado_por = models.CharField(max_length=100, blank=True, null=True)
+    fecha_aceptacion = models.DateTimeField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default="pendiente") 
 
     def __str__(self):
         return self.vehiculo.marca
+    
+
+    def aprobar_y_clonar(self):
+        """
+        Convierte un diagnóstico en un trabajo, clonando también
+        sus acciones y repuestos asociados.
+        """
+        with transaction.atomic():
+            # 🚗 Crear el trabajo
+            trabajo = Trabajo.objects.create(
+                diagnostico=self,
+                vehiculo=self.vehiculo,
+                estado="iniciado",
+                observaciones=self.descripcion_problema,
+            )
+
+            # 🔹 Clonar componentes (M2M)
+            trabajo.componentes.set(self.componentes.all())
+
+            # 🔹 Clonar Acciones asociadas
+            for dca in self.acciones_componentes.all():
+                TrabajoAccion.objects.create(
+                    trabajo=trabajo,
+                    componente=dca.componente,
+                    accion=dca.accion,
+                    precio_mano_obra=dca.precio_mano_obra,
+                    completado=False  # arranca pendiente
+                )
+
+            # 🔹 Clonar Repuestos asociados
+            for dr in self.repuestos.all():
+                TrabajoRepuesto.objects.create(
+                    trabajo=trabajo,
+                    #componente=dr.componente if hasattr(dr, "componente") else None,
+                    componente=getattr(dr, "componente", None),  # si no existe, queda None
+                    repuesto=dr.repuesto,
+                    #repuesto_stock=dr.repuesto_stock,
+                    cantidad=dr.cantidad,
+                    precio_unitario=dr.precio_unitario or 0,
+                    subtotal=dr.subtotal or 0,
+                    #estado="pendiente",  # nuevo campo sugerido en TrabajoRepuesto
+                    #componente=dr.componente if hasattr(dr, "componente") else None
+                )
+
+            # Cambiar estado del diagnóstico
+            self.estado = "aprobado"
+            self.save()
+
+        return trabajo
 
 
+    
 class Reparacion(models.Model):
     diagnostico = models.ForeignKey(Diagnostico, on_delete=models.CASCADE)
     subcomponente = models.CharField(max_length=100)
@@ -301,4 +373,97 @@ class DiagnosticoRepuesto(models.Model):
     def __str__(self):
         return f"{self.repuesto} (x{self.cantidad})"
 
+# ========================
+# Trabajo (clonado desde Diagnóstico aprobado)
+# ========================
+
+class Trabajo(models.Model):
+    ESTADOS = [
+        ("iniciado", "Iniciado"),
+        ("trabajando", "Trabajando"),
+        ("completado", "Completado"),
+        ("entregado", "Entregado"),
+    ]
+
+    diagnostico = models.OneToOneField(Diagnostico, on_delete=models.CASCADE, related_name="trabajo")
+    vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE)
+    fecha_inicio = models.DateTimeField(auto_now_add=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default="en_proceso")
+    observaciones = models.TextField(blank=True, null=True)
+    mecanicos = models.ManyToManyField("Mecanico", related_name="trabajos", blank=True)
+
+    # 🔹 Nuevo: relacionar con componentes (igual que Diagnostico)
+    componentes = models.ManyToManyField("Componente", related_name="trabajos", blank=True)
+
+    def __str__(self):
+        return f"Trabajo #{self.id} - {self.vehiculo}"
+
+    @property
+    def total_mano_obra(self):
+        return sum(a.precio_mano_obra for a in self.acciones.all())
+
+    @property
+    def total_repuestos(self):
+        return sum(r.subtotal or 0 for r in self.repuestos.all())
+
+    @property
+    def total_general(self):
+        return self.total_mano_obra + self.total_repuestos
+
+    @property
+    def porcentaje_avance(self):
+        acciones_total = self.acciones.count()
+        repuestos_total = self.repuestos.count()
+        total_items = acciones_total + repuestos_total
+
+        if total_items == 0:
+            return 0  # nada registrado
+
+        acciones_completadas = self.acciones.filter(completado=True).count()
+        repuestos_instalados = self.repuestos.filter(completado=True).count()
+        completados = acciones_completadas + repuestos_instalados
+
+        return int((completados / total_items) * 100)
+
+class TrabajoFoto(models.Model):
+    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE, related_name="fotos")
+    imagen = models.ImageField(upload_to="trabajos/fotos/%Y/%m/%d")
+    descripcion = models.CharField(max_length=255, blank=True, null=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Foto {self.id} de {self.trabajo}"
+
+
+class TrabajoAccion(models.Model):
+    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE, related_name="acciones")
+    componente = models.ForeignKey("Componente", on_delete=models.CASCADE)
+    accion = models.ForeignKey("Accion", on_delete=models.CASCADE)
+    precio_mano_obra = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    completado = models.BooleanField(default=False)
+    fecha = models.DateTimeField(null=True, blank=True)
+
+    #def __str__(self):
+    #    return f"{self.trabajo} - {self.accion.nombre} {self.componente.nombre}"
+    @property
+    def costo(self):
+        return self.accion.costo if self.completado else 0
+
+    def __str__(self):
+        return f"{self.accion} ({'✔️' if self.completado else 'pendiente'})"
+
+
+class TrabajoRepuesto(models.Model):
+    trabajo = models.ForeignKey(Trabajo, on_delete=models.CASCADE, related_name="repuestos")
+    componente = models.ForeignKey(Componente, on_delete=models.CASCADE, null=True, blank=True)
+    repuesto = models.ForeignKey("Repuesto", on_delete=models.PROTECT)
+    cantidad = models.IntegerField(default=1)
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2)
+    completado = models.BooleanField(default=False)
+    fecha = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.repuesto} (x{self.cantidad})"
 

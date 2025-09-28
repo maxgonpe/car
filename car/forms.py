@@ -1,6 +1,12 @@
 from django import forms
 from .models import Componente, Cliente, Vehiculo,\
-                    Diagnostico,Accion, ComponenteAccion
+                    Diagnostico,Accion, ComponenteAccion,\
+                    Mecanico, Trabajo, TrabajoFoto
+
+class MecanicoForm(forms.ModelForm):
+    class Meta:
+        model = Mecanico
+        fields = ['user', 'especialidad','activo']
 
 
 class ClienteForm(forms.ModelForm):
@@ -97,3 +103,21 @@ class ComponenteAccionForm(forms.ModelForm):
             if exists:
                 raise forms.ValidationError("Ya existe un precio para ese Componente + Acción.")
         return cleaned
+
+class AsignarMecanicosForm(forms.ModelForm):
+    mecanicos = forms.ModelMultipleChoiceField(
+        queryset=Mecanico.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Selecciona los mecánicos"
+    )
+
+    class Meta:
+        model = Trabajo
+        fields = ["mecanicos"]
+
+
+class SubirFotoForm(forms.ModelForm):
+    class Meta:
+        model = TrabajoFoto
+        fields = ["imagen", "descripcion"]

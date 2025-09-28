@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<h2 class="mb-4">📋 Listado de Trabajos</h2>
+
+<input type="text" id="filterInput" class="form-control mb-3" placeholder="Buscar por vehículo, cliente, mecánico, acción...">
+
+<div class="row">
+  {% for trabajo in trabajos %}
+  <div class="col-md-6 mb-4">
+    <div class="card shadow-sm h-100 position-relative">
+      <!-- Marca de agua con % de avance -->
+      <div class="watermark">
+        {{ trabajo.porcentaje_avance }}%
+      </div>
+
+      <div class="card-body">
+        <!-- Encabezado -->
+        <h5 class="card-title">
+          🔧 Trabajo #{{ trabajo.id }} – {{ trabajo.vehiculo }}
+        </h5>
+        <p class="card-text">
+          <strong>Cliente:</strong> {{ trabajo.vehiculo.cliente.nombre }}<br>
+          <strong>Teléfono:</strong> {{ trabajo.vehiculo.cliente.telefono }}<br>
+          <strong>Estado:</strong> 
+          <span class="badge 
+            {% if trabajo.estado == 'iniciado' %}bg-secondary
+            {% elif trabajo.estado == 'trabajando' %}bg-warning
+            {% elif trabajo.estado == 'completado' %}bg-success
+            {% elif trabajo.estado == 'entregado' %}bg-dark
+            {% endif %}">
+            {{ trabajo.get_estado_display }}
+          </span><br>
+          <strong>Fecha Inicio:</strong> {{ trabajo.fecha_inicio|date:"d/m/Y H:i" }}
+        </p>
+
+        <!-- Mecánicos -->
+        <p><strong>👷 Mecánicos:</strong> 
+          {% if trabajo.mecanicos.count %}
+            {% for mec in trabajo.mecanicos.all %}
+              <span class="badge bg-info text-dark">
+                {{ mec.user.get_full_name|default:mec.user.username }}
+                {% if mec.especialidad %} ({{ mec.especialidad }}){% endif %}
+              </span>
+            {% endfor %}
+          {% else %}
+            <span class="text-muted">No asignados</span>
+          {% endif %}
+        </p>
+
+        <!-- Acciones -->
+        <p><strong>🛠️ Acciones:</strong></p>
+        {% if trabajo.acciones.all %}
+          <ul class="list-group list-group-flush small mb-2">
+            {% for acc in trabajo.acciones.all|slice:":3" %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ acc.accion.nombre }} – {{ acc.componente.nombre }}
+                <span class="badge {% if acc.completado %}bg-success{% else %}bg-warning{% endif %}">
+                  {% if acc.completado %}✔️ Completado{% else %}Pendiente{% endif %}
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if trabajo.acciones.count > 3 %}
+            <p class="text-muted small">+ {{ trabajo.acciones.count|add:"-3" }} más...</p>
+          {% endif %}
+        {% else %}
+          <p class="text-muted">No registradas</p>
+        {% endif %}
+
+        <!-- Repuestos -->
+        <p><strong>⚙️ Repuestos:</strong></p>
+        {% if trabajo.repuestos.all %}
+          <ul class="list-group list-group-flush small mb-2">
+            {% for rep in trabajo.repuestos.all|slice:":3" %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ rep.repuesto.nombre }} (x{{ rep.cantidad }})
+                <span class="badge {% if rep.completado %}bg-success{% else %}bg-warning{% endif %}">
+                  {% if rep.completado %}✔️ Instalado{% else %}Pendiente{% endif %}
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if trabajo.repuestos.count > 3 %}
+            <p class="text-muted small">+ {{ trabajo.repuestos.count|add:"-3" }} más...</p>
+          {% endif %}
+        {% else %}
+          <p class="text-muted">No registrados</p>
+        {% endif %}
+
+        <!-- Fotos -->
+        <p><strong>📷 Progreso:</strong></p>
+        <div class="d-flex flex-wrap gap-2">
+          {% for foto in trabajo.fotos.all|slice:":3" %}
+            <img src="{{ foto.imagen.url }}" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover;">
+          {% endfor %}
+          {% if not trabajo.fotos.all %}
+            <span class="text-muted">Sin fotos</span>
+          {% endif %}
+        </div>
+
+        <!-- Barra de progreso -->
+        <div class="progress mt-3" style="height: 20px;">
+          <div class="progress-bar 
+            {% if trabajo.porcentaje_avance < 50 %}bg-danger
+            {% elif trabajo.porcentaje_avance < 100 %}bg-warning
+            {% else %}bg-success{% endif %}"
+            style="width: {{ trabajo.porcentaje_avance }}%;">
+            {{ trabajo.porcentaje_avance }}%
+          </div>
+        </div>
+
+        <!-- Totales -->
+        <div class="mt-3 text-end fw-bold text-success">
+          💰 Total: ${{ trabajo.total_general|default:0|floatformat:0|intcomma }}
+        </div>
+
+        <!-- Botones -->
+        <div class="mt-3">
+          <a href="{% url 'trabajo_detalle' trabajo.pk %}" class="btn btn-secondary btn-sm">Editar</a>
+          <a href="#" class="btn btn-danger btn-sm">Eliminar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+    <p>No hay trabajos registrados.</p>
+  {% endfor %}
+</div>
+
+<style>
+/* Marca de agua del % */
+.watermark {
+  position: absolute;
+  top: 10%;
+  left: 60%;
+  transform: translate(-30%, -30%);
+  font-size: 5rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const filterInput = document.getElementById('filterInput');
+  const cards = document.querySelectorAll('.card');
+  filterInput.addEventListener('keyup', function () {
+    const filterValue = filterInput.value.toLowerCase();
+    cards.forEach(function (card) {
+      const text = card.textContent.toLowerCase();
+      card.style.display = text.includes(filterValue) ? 'block' : 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container py-4">
+  <h2>{{ view.object|default:"Nuevo Vehículo" }}</h2>
+  <form method="post">{% csrf_token %}
+    <div class="mb-3">
+      <label for="id_placa" class="form-label">Placa</label>
+      <div class="input-group">
+        {{ form.placa }}
+        <button type="button" id="btn-buscar-placa" class="btn btn-outline-secondary">Buscar API</button>
+      </div>
+    </div>
+    {{ form.marca|as_crispy_field }}
+    {{ form.modelo|as_crispy_field }}
+    {{ form.anio|as_crispy_field }}
+    {{ form.vin|as_crispy_field }}
+    {{ form.descripcion_motor|as_crispy_field }}
+    {{ form.cliente|as_crispy_field }}
+
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'vehiculo_list' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+
+<script src="{% static 'js/ingreso.js' %}"></script>
+{% endblock %}

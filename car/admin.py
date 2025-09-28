@@ -1,88 +1,130 @@
 from django.contrib import admin
 from .models import (
-    Cliente, Vehiculo, Componente,
-    Diagnostico, Accion, ComponenteAccion, DiagnosticoComponenteAccion,
-    Repuesto, RepuestoEnStock, DiagnosticoRepuesto,StockMovimiento,
-    VehiculoVersion, ComponenteRepuesto,
-    RepuestoAplicacion
+    Cliente, Vehiculo, Mecanico,
+    Diagnostico, DiagnosticoComponenteAccion, DiagnosticoRepuesto,
+    Trabajo, TrabajoAccion, TrabajoRepuesto,TrabajoFoto,
+    Componente, Accion, ComponenteAccion,
+    Repuesto, RepuestoEnStock, StockMovimiento,
+    VehiculoVersion, ComponenteRepuesto, RepuestoAplicacion
+)
 
-    )
+@admin.register(Mecanico)
+class MecanicoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'especialidad', 'fecha_ingreso','activo')
+    search_fields = ('especialidad', 'fecha_ingreso')
 
-# --- Inline para ComponenteAccion dentro de Componente ---
+# ======================
+# Clientes y Vehículos
+# ======================
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'telefono')
+    search_fields = ('nombre', 'telefono')
+
+
+@admin.register(Vehiculo)
+class VehiculoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'placa', 'marca', 'modelo', 'anio')
+    search_fields = ('placa', 'marca', 'modelo')
+
+
+# ======================
+# Catálogo de Componentes y Acciones
+# ======================
 class ComponenteAccionInline(admin.TabularInline):
     model = ComponenteAccion
     extra = 1
     autocomplete_fields = ['accion']
 
-# --- Admin de Componente ---
+
 @admin.register(Componente)
 class ComponenteAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre',)
+    list_display = ('id', 'nombre')
     search_fields = ('nombre',)
     inlines = [ComponenteAccionInline]
 
-# --- Admin de Accion ---
+
 @admin.register(Accion)
 class AccionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre',)
+    list_display = ('id', 'nombre')
     search_fields = ('nombre',)
 
-# --- Admin de ComponenteAccion ---
+
 @admin.register(ComponenteAccion)
 class ComponenteAccionAdmin(admin.ModelAdmin):
     list_display = ('componente', 'accion', 'precio_mano_obra')
     list_filter = ('componente', 'accion')
     search_fields = ('componente__nombre', 'accion__nombre')
 
-# --- Inline para DiagnosticoComponenteAccion dentro de Diagnostico ---
+
+# ======================
+# Diagnóstico
+# ======================
 class DiagnosticoComponenteAccionInline(admin.TabularInline):
     model = DiagnosticoComponenteAccion
     extra = 1
     autocomplete_fields = ['componente', 'accion']
 
+
 class DiagnosticoRepuestoInline(admin.TabularInline):
     model = DiagnosticoRepuesto
-    extra = 1  # Número de formularios vacíos que se mostrarán
-    autocomplete_fields = ['repuesto']  # Permite la búsqueda de repuestos
+    extra = 1
+    autocomplete_fields = ['repuesto']
 
 
-
-# --- Admin de Diagnostico ---
 @admin.register(Diagnostico)
 class DiagnosticoAdmin(admin.ModelAdmin):
-    list_display = ('vehiculo', 'descripcion_problema', 'fecha')
-    list_filter = ('fecha',)
-    search_fields = (
-        'vehiculo__placa',
-        'vehiculo__marca',
-        'componentes__nombre',
-    )
+    list_display = ('id', 'vehiculo', 'descripcion_problema', 'estado', 'fecha')
+    list_filter = ('estado', 'fecha')
+    search_fields = ('vehiculo__placa', 'vehiculo__marca', 'componentes__nombre')
     inlines = [DiagnosticoComponenteAccionInline, DiagnosticoRepuestoInline]
 
-# --- Admin de Vehiculo ---
-@admin.register(Vehiculo)
-class VehiculoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'marca', 'modelo', 'anio', 'placa')
-    search_fields = ('marca', 'modelo', 'placa')
 
-# --- Admin de Cliente ---
-@admin.register(Cliente)
-class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'telefono')
-    search_fields = ('nombre', 'telefono')
+# ======================
+# Trabajo (clonado desde Diagnóstico aprobado)
+# ======================
+class TrabajoAccionInline(admin.TabularInline):
+    model = TrabajoAccion
+    extra = 1
+    autocomplete_fields = ['componente', 'accion']
 
+
+class TrabajoRepuestoInline(admin.TabularInline):
+    model = TrabajoRepuesto
+    extra = 1
+    autocomplete_fields = ['repuesto']
+
+
+@admin.register(Trabajo)
+class TrabajoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'vehiculo', 'estado', 'fecha_inicio', 'fecha_fin')
+    list_filter = ('estado', 'fecha_inicio', 'fecha_fin')
+    search_fields = ('vehiculo__placa', 'vehiculo__marca')
+    inlines = [TrabajoAccionInline, TrabajoRepuestoInline]
+
+
+# ======================
+# Repuestos y Stock
+# ======================
+@admin.register(Repuesto)
 class RepuestoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'sku', 'oem','referencia','nombre','precio_costo','precio_venta')
-    search_fields = ('nombre',) 
-    
-class ComponenteRepuestoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'componente', 'repuesto','nota')
+    list_display = ('id', 'sku', 'oem', 'referencia', 'nombre', 'precio_costo', 'precio_venta')
+    search_fields = ('nombre', 'oem', 'sku')
 
-admin.site.register(DiagnosticoComponenteAccion)
-admin.site.register(Repuesto,RepuestoAdmin)
+
+@admin.register(ComponenteRepuesto)
+class ComponenteRepuestoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'componente', 'repuesto', 'nota')
+
+@admin.register(TrabajoAccion)
+class TrabajoAccionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'trabajo','componente', 'accion', 'precio_mano_obra')
+
+
 admin.site.register(RepuestoEnStock)
-admin.site.register(DiagnosticoRepuesto)
 admin.site.register(StockMovimiento)
 admin.site.register(VehiculoVersion)
-admin.site.register(ComponenteRepuesto,ComponenteRepuestoAdmin)
 admin.site.register(RepuestoAplicacion)
+#admin.site.register(TrabajoAccion)
+admin.site.register(TrabajoFoto)
+admin.site.register(TrabajoRepuesto)

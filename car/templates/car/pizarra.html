@@ -1,0 +1,110 @@
+
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <h2 class="text-center mb-4">📋 Pizarra de Trabajos</h2>
+
+  <div class="row g-3">
+    <!-- Iniciado -->
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-primary h-100">
+        <div class="card-header bg-primary text-white fw-bold text-center">
+          🚦 Iniciado
+        </div>
+        <div class="card-body">
+          {% for t in trabajos_iniciado %}
+            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+              <span style="font-size: 1.8rem;">🚗</span>
+              <div class="ms-3 flex-grow-1">
+                <strong>{{ t.vehiculo.patente }}</strong> — {{ t.vehiculo.cliente.nombre }}<br>
+                <small class="text-muted">Estado: {{ t.get_estado_display }}</small>
+                <div class="progress mt-1" style="height: 8px;">
+                  <div class="progress-bar bg-primary" role="progressbar" style="width: {{ t.porcentaje|default:0 }}%"></div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-muted">No hay trabajos iniciados</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Trabajando -->
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-warning h-100">
+        <div class="card-header bg-warning fw-bold text-dark text-center">
+          🔧 Trabajando
+        </div>
+        <div class="card-body">
+          {% for t in trabajos_trabajando %}
+            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+              <span style="font-size: 1.8rem; color: orange;">🚗</span>
+              <div class="ms-3 flex-grow-1">
+                <strong>{{ t.vehiculo.patente }}</strong> — {{ t.vehiculo.cliente.nombre }}<br>
+                <small class="text-muted">Estado: {{ t.get_estado_display }}</small>
+                <div class="progress mt-1" style="height: 8px;">
+                  <div class="progress-bar bg-warning" role="progressbar" style="width: {{ t.porcentaje|default:0 }}%"></div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-muted">No hay trabajos en curso</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Completado -->
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-success h-100">
+        <div class="card-header bg-success text-white fw-bold text-center">
+          ✅ Completado
+        </div>
+        <div class="card-body">
+          {% for t in trabajos_completado %}
+            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+              <span style="font-size: 1.8rem; color: green;">🚗</span>
+              <div class="ms-3 flex-grow-1">
+                <strong>{{ t.vehiculo.patente }}</strong> — {{ t.vehiculo.cliente.nombre }}<br>
+                <small class="text-muted">Estado: {{ t.get_estado_display }}</small>
+                <div class="progress mt-1" style="height: 8px;">
+                  <div class="progress-bar bg-success" role="progressbar" style="width: {{ t.porcentaje|default:100 }}%"></div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-muted">No hay trabajos completados</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Entregado -->
+    <div class="col-12 col-md-6">
+      <div class="card shadow-sm border-dark h-100">
+        <div class="card-header bg-dark text-white fw-bold text-center">
+          📦 Entregado
+        </div>
+        <div class="card-body">
+          {% for t in trabajos_entregado %}
+            <div class="d-flex align-items-center mb-3 p-2 border rounded">
+              <span style="font-size: 1.8rem; color: gray;">🚗</span>
+              <div class="ms-3 flex-grow-1">
+                <strong>{{ t.vehiculo.patente }}</strong> — {{ t.vehiculo.cliente.nombre }}<br>
+                <small class="text-muted">Estado: {{ t.get_estado_display }}</small>
+                <div class="progress mt-1" style="height: 8px;">
+                  <div class="progress-bar bg-dark" role="progressbar" style="width: 100%"></div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <p class="text-muted">No hay trabajos entregados</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

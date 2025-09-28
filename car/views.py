@@ -22,14 +22,24 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from reportlab.lib.styles import ParagraphStyle
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.decorators import login_required
+from django.utils.timezone import now
 from .models import Diagnostico, Cliente, Vehiculo,\
                     Componente, Accion, ComponenteAccion,\
                     DiagnosticoComponenteAccion, Repuesto, VehiculoVersion,\
-                    DiagnosticoRepuesto
+                    DiagnosticoRepuesto, Trabajo, Mecanico, TrabajoFoto,TrabajoRepuesto,\
+                    TrabajoAccion
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
-                   DiagnosticoForm, AccionForm, ComponenteAccionForm
+                   DiagnosticoForm, AccionForm, ComponenteAccionForm,\
+                   MecanicoForm, AsignarMecanicosForm, SubirFotoForm
 
 
+import requests
 import json
 import openpyxl
 import re
@@ -37,12 +47,28 @@ import pathlib
 import os
 
 
+def login_view(request):
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect("panel_principal")  # cámbialo al dashboard que quieras
+    else:
+        form = AuthenticationForm()
+    return render(request, "registration/login.html", {"form": form})
 
+def logout_view(request):
+    logout(request)
+    return redirect("login")
+
+
+@login_required
 def panel_principal(request):
     clientes = Cliente.objects.all()
     return render(request, 'car/panel_principal.html', {'clientes': clientes})
 
-
+@login_required
 def componente_list(request):
     q = request.GET.get('q', '').strip()
     if q:
@@ -60,6 +86,7 @@ def componente_list(request):
     })
 
 
+@login_required
 @transaction.atomic
 def ingreso_view(request):
     clientes_existentes = Cliente.objects.all().order_by('nombre')
@@ -229,17 +256,17 @@ def ingreso_view(request):
 
 
 
-
+@login_required
 def ingreso_exitoso_view(request):
     return render(request, 'car/ingreso_exitoso.html')
 
-
+@login_required
 def eliminar_diagnostico(request, pk):
     diag = get_object_or_404(Diagnostico, pk=pk)
     diag.delete()
     return redirect('ingreso')
 
-
+@login_required
 def editar_diagnostico(request, pk):
     diag = get_object_or_404(Diagnostico, pk=pk)
     diagnostico_form = DiagnosticoForm(request.POST or None, instance=diag)
@@ -248,7 +275,7 @@ def editar_diagnostico(request, pk):
         return redirect('ingreso')
     return render(request, 'car/editar_diagnostico.html', {'form': diagnostico_form})
 
-
+@login_required
 def componente_create(request):
     if request.method == 'POST':
         form = ComponenteForm(request.POST)
@@ -273,6 +300,7 @@ def componente_create(request):
         'submit_label': 'Crear',
     })
 
+@login_required
 def componente_update(request, pk):
     componente = get_object_or_404(Componente, pk=pk)
     if request.method == 'POST':
@@ -289,6 +317,7 @@ def componente_update(request, pk):
         'submit_label': 'Guardar cambios',
     })
 
+@login_required
 def componente_delete(request, pk):
     componente = get_object_or_404(Componente, pk=pk)
     if request.method == 'POST':
@@ -300,13 +329,13 @@ def componente_delete(request, pk):
     })
 
 
-
+@login_required
 def mostrar_plano(request):
     svg_path = pathlib.Path(settings.BASE_DIR) / 'static' / 'images' / 'vehiculo-desde-abajo.svg'
     svg_content = svg_path.read_text(encoding='utf-8')
     return render(request, 'car/plano_interactivo.html', {'svg': svg_content})
 
-
+@login_required
 def componentes_lookup(request):
     part = (request.GET.get('part') or '').strip()
     if not part:
@@ -354,7 +383,7 @@ def componentes_lookup(request):
 
     return JsonResponse({'found': True, 'parent': parent, 'children': hijos})
 
-
+@login_required
 def seleccionar_componente(request, codigo):
     try:
         comp = Componente.objects.get(codigo=codigo)
@@ -370,6 +399,7 @@ def seleccionar_componente(request, codigo):
     })
 
 
+@login_required
 def get_vehiculos_por_cliente(request, cliente_id):
     vehiculos = Vehiculo.objects.filter(cliente_id=cliente_id).order_by('placa')
     data = [
@@ -384,36 +414,28 @@ def get_vehiculos_por_cliente(request, cliente_id):
     ]
     return JsonResponse(data, safe=False)
 
-
+@login_required
 def lista_diagnosticos(request):
-    diagnosticos = Diagnostico.objects.all().select_related('vehiculo__cliente').prefetch_related(
+    diagnosticos = Diagnostico.objects.all().select_related(
+        'vehiculo__cliente'
+    ).prefetch_related(
         'componentes',
         'acciones_componentes__accion',
         'acciones_componentes__componente',
-        'repuestos'  # Asegúrate de incluir los repuestos aquí
+        'repuestos'
     ).order_by('-fecha')
 
-    # Anotar total por cada diagnóstico
-    diagnosticos = diagnosticos.annotate(
-        total_mano_obra=Sum('acciones_componentes__precio_mano_obra'),
-        total_repuestos=Sum('repuestos__subtotal')  # Asegúrate de que 'subtotal' esté definido en tu modelo
-    )
+    # Agregar campos calculados manualmente
+    for diag in diagnosticos:
+        diag.total_mano_obra = sum(dca.precio_mano_obra or 0 for dca in diag.acciones_componentes.all())
+        diag.total_repuestos = sum(dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0)) for dr in diag.repuestos.all())
+        diag.total_presupuesto = diag.total_mano_obra + diag.total_repuestos
 
-    return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})
+    return render(request, 'car/diagnostico_lista.html', {
+        'diagnosticos': diagnosticos
+    })
 
-def lista_diagnosticos2(request):
-    diagnosticos = Diagnostico.objects.all().select_related('vehiculo__cliente').prefetch_related(
-        'componentes',
-        'acciones_componentes__accion',
-        'acciones_componentes__componente'
-    ).order_by('-fecha')
-
-    # Anotar total por cada diagnóstico
-    diagnosticos = diagnosticos.annotate(
-        total_mano_obra=Sum('acciones_componentes__precio_mano_obra')
-    )
-    return render(request, 'car/diagnostico_lista.html', {'diagnosticos': diagnosticos})
-
+@login_required
 def eliminar_diagnostico(request, pk):
     diagnostico = get_object_or_404(Diagnostico, pk=pk)
     if request.method == 'POST':
@@ -423,6 +445,7 @@ def eliminar_diagnostico(request, pk):
         return redirect('lista_diagnosticos')
     return render(request, 'car/diagnostico_eliminar.html', {'diagnostico': diagnostico})
 
+@login_required
 @require_GET
 def acciones_por_componente(request, componente_id: int):
     """
@@ -457,6 +480,8 @@ def acciones_por_componente(request, componente_id: int):
 # ---- EJEMPLO de handler de guardado (adaptar al tuyo actual) ----
 # Supone que tu formulario ya crea el Diagnostico y guarda M2M de componentes.
 # Solo añadimos la lectura del hidden JSON para poblar DiagnosticoComponenteAccion.
+
+@login_required
 def guardar_diagnostico(request):
     if request.method == "POST":
         # ... tu lógica existente para Cliente/Vehiculo/Diagnostico ...
@@ -494,6 +519,8 @@ def guardar_diagnostico(request):
         # ... redirección o response ...
 
 # ----- ACCION -----
+
+@login_required
 def accion_list(request):
     q = (request.GET.get("q") or "").strip()
     acciones = Accion.objects.all().order_by("nombre")
@@ -501,6 +528,7 @@ def accion_list(request):
         acciones = acciones.filter(nombre__icontains=q)
     return render(request, "car/accion_list.html", {"acciones": acciones, "q": q})
 
+@login_required
 def accion_create(request):
     if request.method == "POST":
         form = AccionForm(request.POST)
@@ -512,6 +540,7 @@ def accion_create(request):
         form = AccionForm()
     return render(request, "car/accion_form.html", {"form": form, "modo": "crear"})
 
+@login_required
 def accion_update(request, pk):
     accion = get_object_or_404(Accion, pk=pk)
     if request.method == "POST":
@@ -524,6 +553,7 @@ def accion_update(request, pk):
         form = AccionForm(instance=accion)
     return render(request, "car/accion_form.html", {"form": form, "modo": "editar", "accion": accion})
 
+@login_required
 def accion_delete(request, pk):
     accion = get_object_or_404(Accion, pk=pk)
     if request.method == "POST":
@@ -534,6 +564,7 @@ def accion_delete(request, pk):
 
 
 # ----- COMPONENTE + ACCION (precios) -----
+@login_required
 def comp_accion_list(request):
     q = (request.GET.get("q") or "").strip()
     items = ComponenteAccion.objects.select_related("componente", "accion").order_by("componente__nombre", "accion__nombre")
@@ -543,6 +574,7 @@ def comp_accion_list(request):
         )
     return render(request, "car/comp_accion_list.html", {"items": items, "q": q})
 
+@login_required
 def comp_accion_create(request):
     if request.method == "POST":
         form = ComponenteAccionForm(request.POST)
@@ -554,6 +586,7 @@ def comp_accion_create(request):
         form = ComponenteAccionForm()
     return render(request, "car/comp_accion_form.html", {"form": form, "modo": "crear"})
 
+@login_required
 def comp_accion_update(request, pk):
     obj = get_object_or_404(ComponenteAccion, pk=pk)
     if request.method == "POST":
@@ -566,6 +599,7 @@ def comp_accion_update(request, pk):
         form = ComponenteAccionForm(instance=obj)
     return render(request, "car/comp_accion_form.html", {"form": form, "modo": "editar", "obj": obj})
 
+@login_required
 def comp_accion_delete(request, pk):
     obj = get_object_or_404(ComponenteAccion, pk=pk)
     if request.method == "POST":
@@ -577,6 +611,7 @@ def comp_accion_delete(request, pk):
 # funciones adicionales para incluir repuestos
 
 
+@login_required
 def sugerir_repuestos(request, diagnostico_id=None):
     """
     Vista única:
@@ -640,7 +675,7 @@ def sugerir_repuestos(request, diagnostico_id=None):
     return JsonResponse({"repuestos": resultados})
 
 
-
+@login_required
 @csrf_exempt
 def agregar_repuesto(request, diagnostico_id):
     """
@@ -689,7 +724,7 @@ def agregar_repuesto(request, diagnostico_id):
 
     return JsonResponse({"ok": True, "dr_id": dr.id})
 
-
+@login_required
 def listar_repuestos_diagnostico(request, diagnostico_id):
     """
     Devuelve los repuestos ya agregados a un diagnóstico en formato JSON.
@@ -718,7 +753,7 @@ def listar_repuestos_diagnostico(request, diagnostico_id):
         "total": total
     })
 
-
+@login_required
 def exportar_diagnosticos_excel(request):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -758,46 +793,8 @@ def exportar_diagnosticos_excel(request):
     wb.save(response)
     return response
 
-def exportar_diagnosticos_pdf(request):
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = 'attachment; filename="diagnosticos.pdf"'
 
-    doc = SimpleDocTemplate(response, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    elements.append(Paragraph("<b>Reporte de Diagnósticos</b>", styles["Title"]))
-    elements.append(Spacer(1, 12))
-
-    data = [["Fecha", "Cliente", "Vehículo", "Diagnóstico", "Total Presupuesto"]]
-
-    for diag in Diagnostico.objects.all():
-        total_mo = diag.total_mano_obra or 0
-        total_repuestos = sum([dr.subtotal for dr in diag.repuestos.all()])
-        total = total_mo + total_repuestos
-
-        data.append([
-            diag.fecha.strftime("%d-%m-%Y"),
-            diag.vehiculo.cliente.nombre,
-            str(diag.vehiculo),
-            diag.descripcion_problema,
-            f"${total:,}"
-        ])
-
-    table = Table(data, colWidths=[80, 100, 120, 150, 80])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.grey),
-        ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
-        ("ALIGN", (0,0), (-1,-1), "CENTER"),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("BOTTOMPADDING", (0,0), (-1,0), 8),
-        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
-    ]))
-
-    elements.append(table)
-    doc.build(elements)
-    return response
-
+@login_required
 def exportar_diagnostico_excel(request, pk):
     diag = get_object_or_404(Diagnostico, pk=pk)
 
@@ -838,123 +835,51 @@ def exportar_diagnostico_excel(request, pk):
     wb.save(response)
     return response
 
-def exportar_diagnostico_pdf2(request, pk):
-    diag = get_object_or_404(Diagnostico, pk=pk)
-
+@login_required
+def exportar_diagnosticos_pdf(request):
     response = HttpResponse(content_type="application/pdf")
-    #response["Content-Disposition"] = f'attachment; filename="diagnostico_{diag.pk}.pdf"'
-    response["Content-Disposition"] = f'inline; filename="diagnostico_{diag.pk}.pdf"'
+    response["Content-Disposition"] = 'attachment; filename="diagnosticos.pdf"'
 
     doc = SimpleDocTemplate(response, pagesize=A4)
     styles = getSampleStyleSheet()
     elements = []
 
-    elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
+    elements.append(Paragraph("<b>Reporte de Diagnósticos</b>", styles["Title"]))
     elements.append(Spacer(1, 12))
 
-    elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
+    data = [["Fecha", "Cliente", "Vehículo","VIN", "Diagnóstico", "Total Presupuesto"]]
 
-    # Acciones
-    data = [["Acción", "Precio"]]
-    total_mo = 0
-    for dca in diag.acciones_componentes.all():
-        data.append([f"{dca.componente.nombre} — {dca.accion.nombre}", f"${dca.precio_mano_obra or 0:,}"])
-        total_mo += dca.precio_mano_obra or 0
-    data.append(["Total Mano de Obra", f"${total_mo:,}"])
-    elements.append(Table(data, colWidths=[300, 100]))
-    elements.append(Spacer(1, 12))
+    for diag in Diagnostico.objects.all():
+        total_mo = diag.total_mano_obra or 0
+        total_repuestos = sum([dr.subtotal for dr in diag.repuestos.all()])
+        total = total_mo + total_repuestos
 
-    # Repuestos
-    data = [["Repuesto", "Cantidad", "Unitario", "Subtotal"]]
-    total_rep = 0
-    for dr in diag.repuestos.all():
-        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
-        data.append([dr.repuesto.nombre, dr.cantidad, f"${dr.precio_unitario:,}", f"${subtotal:,}"])
-        total_rep += subtotal
-    data.append(["Total Repuestos", "", "", f"${total_rep:,}"])
-    elements.append(Table(data, colWidths=[200, 70, 70, 100]))
-    elements.append(Spacer(1, 12))
+        data.append([
+            diag.fecha.strftime("%d-%m-%Y"),
+            diag.vehiculo.cliente.nombre,
+            str(diag.vehiculo),
+            diag.vehiculo.vin,
+            diag.descripcion_problema,
+            f"${total:,}"
+        ])
 
-    elements.append(Paragraph(f"<b>TOTAL PRESUPUESTO: ${total_mo + total_rep:,}</b>", styles["Heading2"]))
+    table = Table(data, colWidths=[80, 100, 120, 150, 80])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.grey),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0,0), (-1,0), 8),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
+    ]))
 
+    elements.append(table)
     doc.build(elements)
     return response
 
-def exportar_diagnostico_pdf3(request, pk):
-    diag = get_object_or_404(Diagnostico, pk=pk)
 
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'inline; filename="diagnostico_{diag.pk}.pdf"'
 
-    doc = SimpleDocTemplate(response, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
-    elements.append(Spacer(1, 12))
-
-    elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
-    elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
-    elements.append(Spacer(1, 12))
-
-    # Tabla de Acciones
-    acciones_data = [["Acción", "Precio"]]
-    total_mo = 0
-    for dca in diag.acciones_componentes.all():
-        acciones_data.append([f"{dca.componente.nombre} — {dca.accion.nombre}", f"${dca.precio_mano_obra or 0:,}"])
-        total_mo += dca.precio_mano_obra or 0
-    acciones_data.append(["Total Mano de Obra", f"${total_mo:,}"])
-
-    acciones_table = Table(acciones_data, colWidths=[300, 100])
-    acciones_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('SIZE', (0, 0), (-1, 0), 14),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    elements.append(acciones_table)
-    elements.append(Spacer(1, 12))
-
-    # Tabla de Repuestos
-    repuestos_data = [["Repuesto", "Cantidad", "Unitario", "Subtotal"]]
-    total_rep = 0
-    for dr in diag.repuestos.all():
-        subtotal = dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0))
-        repuestos_data.append([dr.repuesto.nombre, dr.cantidad, f"${dr.precio_unitario:,}", f"${subtotal:,}"])
-        total_rep += subtotal
-    repuestos_data.append(["Total Repuestos", "", "", f"${total_rep:,}"])
-
-    repuestos_table = Table(repuestos_data, colWidths=[200, 70, 70, 100])
-    repuestos_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('SIZE', (0, 0), (-1, 0), 14),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
-    elements.append(repuestos_table)
-    elements.append(Spacer(1, 12))
-
-    # Total Presupuesto
-    total_presupuesto = total_mo + total_rep
-    elements.append(Paragraph(f"<b>TOTAL PRESUPUESTO: ${total_presupuesto:,}</b>", styles["Heading2"]))
-
-    doc.build(elements)
-    return response
-
+@login_required
 def exportar_diagnostico_pdf(request, pk):
     diag = get_object_or_404(Diagnostico, pk=pk)
 
@@ -963,14 +888,22 @@ def exportar_diagnostico_pdf(request, pk):
 
     doc = SimpleDocTemplate(response, pagesize=A4)
     styles = getSampleStyleSheet()
+    # Define un nuevo estilo para el texto rojo
+    red_text_style = ParagraphStyle(
+    name='RedText',
+    fontName='Helvetica',
+    fontSize=10,
+    textColor=colors.red,  # Cambia el color a rojo
+    
+)
     elements = []
 
     elements.append(Paragraph(f"<b>Diagnóstico #{diag.pk}</b>", styles["Title"]))
     elements.append(Spacer(1, 12))
-
     elements.append(Paragraph(f"<b>Fecha:</b> {diag.fecha.strftime('%d-%m-%Y')}", styles["Normal"]))
     elements.append(Paragraph(f"<b>Cliente:</b> {diag.vehiculo.cliente.nombre}", styles["Normal"]))
     elements.append(Paragraph(f"<b>Vehículo:</b> {diag.vehiculo}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>VIN:</b> {diag.vehiculo.vin}", red_text_style))
     elements.append(Paragraph(f"<b>Descripción:</b> {diag.descripcion_problema}", styles["Normal"]))
     elements.append(Spacer(1, 12))
 
@@ -1025,3 +958,311 @@ def exportar_diagnostico_pdf(request, pk):
 
     doc.build(elements)
     return response
+
+
+# ---- CLIENTES ----
+class ClienteListView(ListView):
+    model = Cliente
+    template_name = "car/cliente_list.html"
+    context_object_name = "clientes"
+
+class ClienteCreateView(CreateView):
+    model = Cliente
+    fields = ["nombre", "telefono"]
+    template_name = "car/cliente_form.html"
+    success_url = reverse_lazy("cliente_list")
+
+class ClienteUpdateView(UpdateView):
+    model = Cliente
+    fields = ["nombre", "telefono"]
+    template_name = "car/cliente_form.html"
+    success_url = reverse_lazy("cliente_list")
+
+class ClienteDeleteView(DeleteView):
+    model = Cliente
+    template_name = "car/cliente_confirm_delete.html"
+    success_url = reverse_lazy("cliente_list")
+
+# ---- VEHICULOS ----
+class VehiculoListView(ListView):
+    model = Vehiculo
+    template_name = "car/vehiculo_list.html"
+    context_object_name = "vehiculos"
+
+class VehiculoCreateView(CreateView):
+    model = Vehiculo
+    fields = ["cliente", "placa", "marca", "modelo", "anio", "vin", "descripcion_motor"]
+    template_name = "car/vehiculo_form.html"
+    success_url = reverse_lazy("vehiculo_list")
+
+class VehiculoUpdateView(UpdateView):
+    model = Vehiculo
+    fields = ["cliente", "placa", "marca", "modelo", "anio", "vin", "descripcion_motor"]
+    template_name = "car/vehiculo_form.html"
+    success_url = reverse_lazy("vehiculo_list")
+
+class VehiculoDeleteView(DeleteView):
+    model = Vehiculo
+    template_name = "car/vehiculo_confirm_delete.html"
+    success_url = reverse_lazy("vehiculo_list")
+
+# ---- MecanicoS ----
+class MecanicoListView(ListView):
+    model = Mecanico
+    template_name = "car/mecanico_list.html"
+    context_object_name = "mecanicos"
+
+class MecanicoCreateView(CreateView):
+    model = Mecanico
+    fields = ["user", "especialidad","activo"]
+    template_name = "car/mecanico_form.html"
+    success_url = reverse_lazy("mecanico_list")
+
+class MecanicoUpdateView(UpdateView):
+    model = Mecanico
+    fields = ["user", "especialidad","activo"]
+    template_name = "car/mecanico_form.html"
+    success_url = reverse_lazy("mecanico_list")
+
+class MecanicoDeleteView(DeleteView):
+    model = Mecanico
+    template_name = "car/mecanico_confirm_delete.html"
+    success_url = reverse_lazy("mecanico_list")
+
+@login_required
+def aprobar_diagnostico(request, pk):
+    diagnostico = get_object_or_404(Diagnostico, pk=pk)
+
+    if diagnostico.estado != "aprobado":
+        trabajo = diagnostico.aprobar_y_clonar()
+        messages.success(request, f"✅ Diagnóstico aprobado y trabajo #{trabajo.id} creado.")
+    else:
+        messages.info(request, "ℹ️ Este diagnóstico ya estaba aprobado.")
+
+    return redirect("lista_diagnosticos")
+
+@login_required
+def lista_trabajos2(request):
+    trabajos = Trabajo.objects.all().select_related(
+        'vehiculo__cliente'
+    ).prefetch_related(
+        'acciones_componentes__accion',
+        'acciones_componentes__componente',
+        'repuestos'
+    ).order_by('-fecha_inicio')
+
+    # Calcular totales igual que en diagnósticos
+    for t in trabajos:
+        t.total_mano_obra = sum(tca.precio_mano_obra or 0 for tca in t.acciones_componentes.all())
+        t.total_repuestos = sum(tr.subtotal or (tr.cantidad * (tr.precio_unitario or 0)) for tr in t.repuestos.all())
+        t.total_presupuesto = t.total_mano_obra + t.total_repuestos
+
+    return render(request, 'car/trabajo_lista.html', {
+        'trabajos': trabajos
+    })
+
+
+@login_required
+def lista_trabajos(request):
+    trabajos = Trabajo.objects.all().select_related(
+        'vehiculo__cliente'
+    ).order_by('-fecha_inicio')
+
+    # Agregar campos calculados
+    
+
+    return render(request, 'car/trabajo_lista.html', {
+        'trabajos': trabajos
+    })
+
+'''
+def lista_diagnosticos(request):
+    diagnosticos = Diagnostico.objects.all().select_related(
+        'vehiculo__cliente'
+    ).prefetch_related(
+        'componentes',
+        'acciones_componentes__accion',
+        'acciones_componentes__componente',
+        'repuestos'
+    ).order_by('-fecha')
+
+    # Agregar campos calculados manualmente
+    for diag in diagnosticos:
+        diag.total_mano_obra = sum(dca.precio_mano_obra or 0 for dca in diag.acciones_componentes.all())
+        diag.total_repuestos = sum(dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0)) for dr in diag.repuestos.all())
+        diag.total_presupuesto = diag.total_mano_obra + diag.total_repuestos
+
+    return render(request, 'car/diagnostico_lista.html', {
+        'diagnosticos': diagnosticos
+    })
+'''
+from django.utils.timezone import now
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def trabajo_detalle(request, pk):
+    trabajo = get_object_or_404(Trabajo, pk=pk)
+
+    # Formularios
+    asignar_form = AsignarMecanicosForm(instance=trabajo)
+    foto_form = SubirFotoForm()
+
+    if request.method == "POST":
+        if "asignar_mecanicos" in request.POST:
+            asignar_form = AsignarMecanicosForm(request.POST, instance=trabajo)
+            if asignar_form.is_valid():
+                trabajo = asignar_form.save(commit=False)
+                if trabajo.estado == "iniciado":
+                    trabajo.estado = "trabajando"
+                    trabajo.fecha_inicio = now()
+                trabajo.save()
+                asignar_form.save_m2m()
+                messages.success(request, "Mecánicos asignados y trabajo iniciado.")
+                return redirect("trabajo_detalle", pk=trabajo.pk)
+        # 🔹 Subir foto
+        elif "subir_foto" in request.POST:
+            foto_form = SubirFotoForm(request.POST, request.FILES)
+            if foto_form.is_valid():
+                foto = foto_form.save(commit=False)
+                foto.trabajo = trabajo
+                foto.save()
+                messages.success(request, "Foto subida con éxito.")
+                return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        # 🔹 Cambiar estado del trabajo (adelante/atrás)
+        elif "cambiar_estado" in request.POST:
+            nuevo_estado = request.POST.get("cambiar_estado")
+            if nuevo_estado in dict(Trabajo.ESTADOS).keys():
+                trabajo.estado = nuevo_estado
+                if nuevo_estado == "trabajando" and not trabajo.fecha_inicio:
+                    trabajo.fecha_inicio = now()
+                if nuevo_estado in ["completado", "entregado"]:
+                    trabajo.fecha_fin = now()
+                else:
+                    trabajo.fecha_fin = None
+                trabajo.save()
+                messages.success(request, f"Trabajo actualizado a {trabajo.get_estado_display()}.")
+            return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        # 🔹 Toggle acción completada / pendiente
+        elif "accion_toggle" in request.POST:
+            accion_id = request.POST.get("accion_toggle")
+            accion = get_object_or_404(TrabajoAccion, id=accion_id, trabajo=trabajo)
+            accion.completado = not accion.completado
+            accion.fecha = now() if accion.completado else None
+            accion.save()
+            messages.success(request, f"Acción '{accion.accion.nombre}' actualizada.")
+            return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        # 🔹 Toggle repuesto instalado / pendiente
+        elif "repuesto_toggle" in request.POST:
+            rep_id = request.POST.get("repuesto_toggle")
+            rep = get_object_or_404(TrabajoRepuesto, id=rep_id, trabajo=trabajo)
+            rep.completado = not rep.completado
+            rep.fecha = now() if rep.completado else None
+            rep.save()
+            messages.success(request, f"Repuesto '{rep.repuesto.nombre}' actualizado.")
+            return redirect("trabajo_detalle", pk=trabajo.pk)
+
+    context = {
+        "trabajo": trabajo,
+        "asignar_form": asignar_form,
+        "foto_form": foto_form,
+    }
+    return render(request, "car/trabajo_detalle.html", context)
+
+
+
+
+@login_required
+def trabajo_detalle2(request, pk):
+    print("llegue a la vista de trabajo")
+    trabajo = get_object_or_404(Trabajo, pk=pk)
+
+    # Formularios
+    asignar_form = AsignarMecanicosForm(instance=trabajo)
+    foto_form = SubirFotoForm()
+
+    if request.method == "POST":
+        if "asignar_mecanicos" in request.POST:
+            asignar_form = AsignarMecanicosForm(request.POST, instance=trabajo)
+            if asignar_form.is_valid():
+                trabajo = asignar_form.save(commit=False)
+                if trabajo.estado == "iniciado":
+                    trabajo.estado = "trabajando"
+                    trabajo.fecha_inicio = now()
+                trabajo.save()
+                asignar_form.save_m2m()
+                messages.success(request, "Mecánicos asignados y trabajo iniciado.")
+                return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        elif "subir_foto" in request.POST:
+            foto_form = SubirFotoForm(request.POST, request.FILES)
+            if foto_form.is_valid():
+                foto = foto_form.save(commit=False)
+                foto.trabajo = trabajo
+                foto.save()
+                messages.success(request, "Foto subida con éxito.")
+                return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        elif "marcar_completado" in request.POST:
+            trabajo.estado = "completado"
+            trabajo.fecha_fin = now()
+            trabajo.save()
+            messages.success(request, "El trabajo ha sido marcado como completado.")
+            return redirect("trabajo_detalle", pk=trabajo.pk)
+
+        elif "marcar_entregado" in request.POST:
+            trabajo.estado = "entregado"
+            trabajo.save()
+            messages.success(request, "El trabajo ha sido marcado como entregado.")
+            return redirect("trabajo_detalle", pk=trabajo.pk)
+
+    context = {
+        "trabajo": trabajo,
+        "asignar_form": asignar_form,
+        "foto_form": foto_form,
+    }
+    return render(request, "car/trabajo_detalle.html", context)
+
+
+@login_required
+def pizarra_view(request):
+    trabajos = Trabajo.objects.select_related("vehiculo", "vehiculo__cliente")
+
+    context = {
+        "iniciados": trabajos.filter(estado="iniciado"),
+        "trabajando": trabajos.filter(estado="trabajando"),
+        "completados": trabajos.filter(estado="completado"),
+        "entregados": trabajos.filter(estado="entregado"),
+    }
+    return render(request, "car/pizarra_page.html", context)
+
+@login_required
+def panel_principal(request):
+    trabajos = Trabajo.objects.select_related("vehiculo", "vehiculo__cliente")
+    context = {
+        "iniciados": trabajos.filter(estado="iniciado"),
+        "trabajando": trabajos.filter(estado="trabajando"),
+        "completados": trabajos.filter(estado="completado"),
+        "entregados": trabajos.filter(estado="entregado"),
+    }
+    return render(request, "car/panel_principal.html", context)
+
+
+
+@login_required
+def pizarra_view2(request):
+    trabajos_iniciado = Trabajo.objects.filter(estado="iniciado")
+    trabajos_trabajando = Trabajo.objects.filter(estado="trabajando")
+    trabajos_completado = Trabajo.objects.filter(estado="completado")
+    trabajos_entregado = Trabajo.objects.filter(estado="entregado")
+
+    return render(request, "car/pizarra.html", {
+        "trabajos_iniciado": trabajos_iniciado,
+        "trabajos_trabajando": trabajos_trabajando,
+        "trabajos_completado": trabajos_completado,
+        "trabajos_entregado": trabajos_entregado,
+    })
