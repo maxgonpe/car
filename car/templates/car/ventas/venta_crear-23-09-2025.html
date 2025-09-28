@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h2>🛒 Nueva Venta</h2>
+
+<form method="post" id="venta-form">
+  {% csrf_token %}
+  <div class="row mb-3">
+    <div class="col-md-6">
+      {{ form.as_p }}
+    </div>
+
+    <div class="col-md-6">
+      <label for="producto-search" class="form-label">Buscar repuesto (sku, oem, referencia, nombre, marca, código)</label>
+      <select id="producto-search" style="width:100%"></select>
+      <div class="mt-2">
+        <button type="button" id="add-selected" class="btn btn-primary me-2">➕ Agregar</button>
+        <button type="button" id="clear-search" class="btn btn-light">Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campo oculto: aquí serializamos el carrito -->
+  <input type="hidden" name="cart_json" id="id_cart_json" value="[]">
+
+  <h5>Productos</h5>
+  <table id="productos-table" class="table table-sm table-striped align-middle">
+    <thead>
+      <tr>
+        <th style="width:50%">Repuesto</th>
+        <th style="width:10%">Cant</th>
+        <th style="width:15%">Precio</th>
+        <th style="width:15%">Subtotal</th>
+        <th style="width:10%"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- filas generadas por JS -->
+    </tbody>
+  </table>
+
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <div><small class="text-muted">Puedes buscar y agregar varios productos. La venta será procesada al guardar el formulario.</small></div>
+    <div><h4>Total: $ <span id="total">0.00</span></h4></div>
+  </div>
+
+  <div class="mt-3">
+    <button type="submit" class="btn btn-success">💾 Finalizar Venta</button>
+    <a href="{% url 'ventas_historial' %}" class="btn btn-secondary">Historial</a>
+  </div>
+</form>
+
+<!-- Dependencias -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+
+<script>
+$(function(){
+
+  // cart: array de items -> {repuesto_stock_id, cantidad, precio_unitario, subtotal, repuesto_nombre, text, stock, deposito}
+  let cart = [];
+
+  function updateHiddenCart() {
+    $('#id_cart_json').val(JSON.stringify(cart));
+  }
+
+  function calcularTotal() {
+    let total = 0;
+    cart.forEach(it => { total += parseFloat(it.subtotal || 0); });
+    $('#total').text(total.toFixed(2));
+  }
+
+  function renderTable() {
+    const tbody = $('#productos-table tbody').empty();
+    cart.forEach((it, i) => {
+      const tr = $('<tr/>');
+      const repCol = $('<td/>').html(`<div><strong>${it.repuesto_nombre}</strong></div><div class="text-muted small">${it.text}</div><div class="text-muted small">Dep: ${it.deposito} — Stock: ${it.stock}</div>`);
+      const qtyInput = $(`<input type="number" class="form-control form-control-sm qty" min="1" value="${it.cantidad}" style="width:90px">`);
+      qtyInput.on('change input', function(){
+        let q = parseInt($(this).val() || 0);
+        if (q < 1) { q = 1; $(this).val(q); }
+        it.cantidad = q;
+        it.subtotal = (parseFloat(it.precio_unitario) * q).toFixed(2);
+        updateHiddenCart();
+        renderTable();
+      });
+      const qtyCol = $('<td/>').append(qtyInput);
+      const priceCol = $('<td/>').text(parseFloat(it.precio_unitario).toFixed(2));
+      const subtotalInput = $('<input type="text" readonly class="form-control form-control-sm subtotal" style="width:120px">').val(parseFloat(it.subtotal).toFixed(2));
+      const subCol = $('<td/>').append(subtotalInput);
+      const delBtn = $('<button type="button" class="btn btn-danger btn-sm">✖</button>');
+      delBtn.on('click', function(){
+        cart.splice(i,1);
+        updateHiddenCart();
+        renderTable();
+      });
+      const delCol = $('<td/>').append(delBtn);
+
+      tr.append(repCol, qtyCol, priceCol, subCol, delCol);
+      tbody.append(tr);
+    });
+    updateHiddenCart();
+    calcularTotal();
+  }
+
+  // inicializar select2 (debe existir una view 'repuesto_lookup' que devuelva JSON)
+  $("#producto-search").select2({
+    placeholder: "Escribe para buscar repuestos...",
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'repuesto_lookup' %}",
+      dataType: "json",
+      delay: 250,
+      data: function(params){ return { q: params.term || "" }; },
+      processResults: function(data){ return { results: data.results }; },
+      error: function(e) { console.error(e); }
+    },
+    templateResult: function(item){
+      if (!item.id) return item.text;
+      return $('<span>' + item.text + ' <small class="text-muted"> (stock: ' + item.stock + ') </small></span>');
+    },
+    escapeMarkup: function(m){ return m; },
+    width: "100%",
+  });
+
+  // agregar seleccionado
+  $('#add-selected').on('click', function(){
+    const sel = $('#producto-search').select2('data')[0];
+    if (!sel) { alert('Selecciona un repuesto'); return; }
+    // si existe mismo stock id, incrementar cantidad
+    const existing = cart.find(c => String(c.repuesto_stock_id) === String(sel.id));
+    if (existing) {
+      existing.cantidad = (existing.cantidad || 0) + 1;
+      existing.subtotal = (parseFloat(existing.precio_unitario) * existing.cantidad).toFixed(2);
+    } else {
+      // precio_venta debería venir como string/num desde el lookup
+      const precio = (sel.precio_venta !== undefined) ? parseFloat(String(sel.precio_venta)) : 0;
+      cart.push({
+        repuesto_stock_id: sel.id,
+        cantidad: 1,
+        precio_unitario: precio.toFixed(2),
+        subtotal: precio.toFixed(2),
+        repuesto_nombre: sel.repuesto_nombre || sel.text,
+        text: sel.text || "",
+        stock: sel.stock || 0,
+        deposito: sel.deposito || ""
+      });
+    }
+    renderTable();
+    $('#producto-search').val(null).trigger('change');
+  });
+
+  // agregar con enter/selección
+  $('#producto-search').on('select2:select', function(e){
+    const sel = e.params.data;
+    $('#add-selected').trigger('click');
+  });
+
+  $('#clear-search').on('click', function(){ $('#producto-search').val(null).trigger('change'); });
+
+  // al enviar el form: asegurarnos que cart no esté vacío
+  $('#venta-form').on('submit', function(e){
+    if (cart.length === 0) {
+      e.preventDefault();
+      alert("Agrega al menos un producto a la venta.");
+      return false;
+    }
+    // hidden already updated por renderTable/updateHiddenCart()
+    return true;
+  });
+
+});
+</script>
+
+{% endblock %}

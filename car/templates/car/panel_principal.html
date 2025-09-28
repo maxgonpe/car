@@ -2,6 +2,41 @@
 {% load static %}
 
 {% block content %}
+<head>
+<style>
+.link-card {
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.link-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Cambiar el color de fondo de las pestañas */
+.nav-tabs {
+    background-color: transparent; /* Cambia este color según lo desees */
+}
+
+/* Cambiar el color de los enlaces de la navbar a blanco */
+    .nav-link {
+    background-color: transparent;
+    color: white !important;
+    font-family: Arial, sans-serif; 
+    font-size: 18px; 
+    font-weight: bold; 
+    text-decoration: none; 
+    }
+
+    .nav-link:hover {
+        color: #ccc; /* Color al pasar el mouse, ajusta según prefieras */
+    }
+
+</style>
+
+</head>
 <div class="container py-4">
 
   <!-- Tabs -->
@@ -21,9 +56,10 @@
         ⚙️ Administración
       </button>
     </li>
+    
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="clientes-tab" data-bs-toggle="tab" data-bs-target="#clientes" type="button" role="tab">
-        👥 Datos
+      <button class="nav-link" id="ventas-tab" data-bs-toggle="tab" data-bs-target="#ventas" type="button" role="tab">
+        🛒 Ventas
       </button>
     </li>
   </ul>
@@ -38,7 +74,6 @@
     <!-- TAB 2: Gestión Taller -->
     <div class="tab-pane fade" id="gestion" role="tabpanel">
       <div class="row g-3">
-
         <div class="col-6 col-md-4 col-lg-3">
           <a href="{% url 'ingreso' %}" class="card text-center shadow-sm h-100 link-card">
             <div class="card-body d-flex flex-column justify-content-center">
@@ -83,14 +118,12 @@
             </div>
           </a>
         </div>
-
       </div>
     </div>
 
     <!-- TAB 3: Administración -->
     <div class="tab-pane fade" id="admin" role="tabpanel">
       <div class="row g-3">
-
         <div class="col-6 col-md-4 col-lg-3">
           <a href="{% url 'componente_list' %}" class="card text-center shadow-sm h-100 link-card">
             <div class="card-body d-flex flex-column justify-content-center">
@@ -145,12 +178,6 @@
           </a>
         </div>
 
-      </div>
-    </div>
-
-    <!-- TAB 4: Clientes/Vehículos -->
-    <div class="tab-pane fade" id="clientes" role="tabpanel">
-      <div class="row g-3">
         <div class="col-6 col-md-4 col-lg-3">
           <a href="{% url 'cliente_list' %}" class="card text-center shadow-sm h-100 link-card">
             <div class="card-body d-flex flex-column justify-content-center">
@@ -167,22 +194,40 @@
             </div>
           </a>
         </div>
+
+
+      </div>
+    </div>
+
+    
+
+    <!-- TAB 5: Ventas -->
+    <div class="tab-pane fade" id="ventas" role="tabpanel">
+      <div class="row g-3">
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'venta_crear' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">📝</div>
+              <h6 class="mt-2">Crear Venta</h6>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{% url 'ventas_historial' %}" class="card text-center shadow-sm h-100 link-card">
+            <div class="card-body d-flex flex-column justify-content-center">
+              <div class="display-6">📊</div>
+              <h6 class="mt-2">Historial Ventas</h6>
+            </div>
+          </a>
+        </div>
+
+        
       </div>
     </div>
 
   </div>
 </div>
 
-<style>
-.link-card {
-  text-decoration: none;
-  color: inherit;
-  border-radius: 12px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.link-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-</style>
+
 {% endblock %}

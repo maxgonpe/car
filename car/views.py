@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal,InvalidOperation
 from datetime import date, timedelta
 from django.conf import settings
 from django.http import Http404
@@ -29,16 +29,23 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.utils.timezone import now
+
+
+
 from .models import Diagnostico, Cliente, Vehiculo,\
                     Componente, Accion, ComponenteAccion,\
                     DiagnosticoComponenteAccion, Repuesto, VehiculoVersion,\
                     DiagnosticoRepuesto, Trabajo, Mecanico, TrabajoFoto,TrabajoRepuesto,\
-                    TrabajoAccion
+                    TrabajoAccion, Venta, VentaItem, RepuestoEnStock, StockMovimiento
+from django.forms import modelformset_factory
+from django.forms import inlineformset_factory
 from .forms import ComponenteForm, ClienteForm, VehiculoForm,\
                    DiagnosticoForm, AccionForm, ComponenteAccionForm,\
-                   MecanicoForm, AsignarMecanicosForm, SubirFotoForm
+                   MecanicoForm, AsignarMecanicosForm, SubirFotoForm,\
+                   VentaForm, VentaItemForm
 
 
+import datetime
 import requests
 import json
 import openpyxl
@@ -1075,31 +1082,8 @@ def lista_trabajos(request):
         'trabajos': trabajos
     })
 
-'''
-def lista_diagnosticos(request):
-    diagnosticos = Diagnostico.objects.all().select_related(
-        'vehiculo__cliente'
-    ).prefetch_related(
-        'componentes',
-        'acciones_componentes__accion',
-        'acciones_componentes__componente',
-        'repuestos'
-    ).order_by('-fecha')
 
-    # Agregar campos calculados manualmente
-    for diag in diagnosticos:
-        diag.total_mano_obra = sum(dca.precio_mano_obra or 0 for dca in diag.acciones_componentes.all())
-        diag.total_repuestos = sum(dr.subtotal or (dr.cantidad * (dr.precio_unitario or 0)) for dr in diag.repuestos.all())
-        diag.total_presupuesto = diag.total_mano_obra + diag.total_repuestos
 
-    return render(request, 'car/diagnostico_lista.html', {
-        'diagnosticos': diagnosticos
-    })
-'''
-from django.utils.timezone import now
-from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 
 @login_required
 def trabajo_detalle(request, pk):
@@ -1175,59 +1159,6 @@ def trabajo_detalle(request, pk):
 
 
 
-
-@login_required
-def trabajo_detalle2(request, pk):
-    print("llegue a la vista de trabajo")
-    trabajo = get_object_or_404(Trabajo, pk=pk)
-
-    # Formularios
-    asignar_form = AsignarMecanicosForm(instance=trabajo)
-    foto_form = SubirFotoForm()
-
-    if request.method == "POST":
-        if "asignar_mecanicos" in request.POST:
-            asignar_form = AsignarMecanicosForm(request.POST, instance=trabajo)
-            if asignar_form.is_valid():
-                trabajo = asignar_form.save(commit=False)
-                if trabajo.estado == "iniciado":
-                    trabajo.estado = "trabajando"
-                    trabajo.fecha_inicio = now()
-                trabajo.save()
-                asignar_form.save_m2m()
-                messages.success(request, "Mecánicos asignados y trabajo iniciado.")
-                return redirect("trabajo_detalle", pk=trabajo.pk)
-
-        elif "subir_foto" in request.POST:
-            foto_form = SubirFotoForm(request.POST, request.FILES)
-            if foto_form.is_valid():
-                foto = foto_form.save(commit=False)
-                foto.trabajo = trabajo
-                foto.save()
-                messages.success(request, "Foto subida con éxito.")
-                return redirect("trabajo_detalle", pk=trabajo.pk)
-
-        elif "marcar_completado" in request.POST:
-            trabajo.estado = "completado"
-            trabajo.fecha_fin = now()
-            trabajo.save()
-            messages.success(request, "El trabajo ha sido marcado como completado.")
-            return redirect("trabajo_detalle", pk=trabajo.pk)
-
-        elif "marcar_entregado" in request.POST:
-            trabajo.estado = "entregado"
-            trabajo.save()
-            messages.success(request, "El trabajo ha sido marcado como entregado.")
-            return redirect("trabajo_detalle", pk=trabajo.pk)
-
-    context = {
-        "trabajo": trabajo,
-        "asignar_form": asignar_form,
-        "foto_form": foto_form,
-    }
-    return render(request, "car/trabajo_detalle.html", context)
-
-
 @login_required
 def pizarra_view(request):
     trabajos = Trabajo.objects.select_related("vehiculo", "vehiculo__cliente")
@@ -1252,17 +1183,140 @@ def panel_principal(request):
     return render(request, "car/panel_principal.html", context)
 
 
+def venta_crear(request):
+    today = datetime.date.today()
+    fecha_str = request.GET.get("fecha")
+    try:
+        filtro_fecha = datetime.date.fromisoformat(fecha_str) if fecha_str else today
+    except ValueError:
+        filtro_fecha = today
 
-@login_required
-def pizarra_view2(request):
-    trabajos_iniciado = Trabajo.objects.filter(estado="iniciado")
-    trabajos_trabajando = Trabajo.objects.filter(estado="trabajando")
-    trabajos_completado = Trabajo.objects.filter(estado="completado")
-    trabajos_entregado = Trabajo.objects.filter(estado="entregado")
+    if request.method == "POST":
+        form = VentaForm(request.POST)
+        cart_json = request.POST.get("cart_json", "[]")
+        try:
+            cart = json.loads(cart_json)
+        except Exception:
+            cart = []
+        # Validación mínima del cart
+        if not cart:
+            messages.error(request, "No hay productos en la venta.")
+        elif not form.is_valid():
+            messages.error(request, "Corrige los datos del formulario.")
+        else:
+            # Guardar la venta + items
+            with transaction.atomic():
+                venta = form.save(commit=False)
+                venta.usuario = request.user
+                venta.total = Decimal("0.00")
+                venta.save()
 
-    return render(request, "car/pizarra.html", {
-        "trabajos_iniciado": trabajos_iniciado,
-        "trabajos_trabajando": trabajos_trabajando,
-        "trabajos_completado": trabajos_completado,
-        "trabajos_entregado": trabajos_entregado,
-    })
+                total = Decimal("0.00")
+                for idx, it in enumerate(cart):
+                    try:
+                        repuesto_stock_id = int(it.get("repuesto_stock_id"))
+                        cantidad = int(it.get("cantidad", 1))
+                        precio_unitario = Decimal(str(it.get("precio_unitario", "0")))
+                    except (ValueError, TypeError, InvalidOperation) as e:
+                        raise ValueError(f"Datos inválidos en item #{idx+1}: {e}")
+
+                    rs = get_object_or_404(RepuestoEnStock, pk=repuesto_stock_id)
+
+                    # validar stock disponible
+                    if rs.disponible < cantidad:
+                        raise ValueError(f"Stock insuficiente para {rs.repuesto.nombre} (Disponible: {rs.disponible})")
+
+                    subtotal = precio_unitario * cantidad
+
+                    VentaItem.objects.create(
+                        venta=venta,
+                        repuesto_stock=rs,
+                        cantidad=cantidad,
+                        precio_unitario=precio_unitario,
+                        subtotal=subtotal
+                    )
+
+                    # actualizar stock y movimiento
+                    rs.stock = rs.stock - cantidad
+                    rs.save(update_fields=["stock", "ultima_actualizacion"])
+                    StockMovimiento.objects.create(
+                        repuesto_stock=rs,
+                        tipo="salida",
+                        cantidad=cantidad,
+                        motivo=f"Venta #{venta.id}",
+                        referencia=str(venta.id),
+                        usuario=request.user
+                    )
+
+                    total += subtotal
+
+                venta.total = total
+                venta.pagado = True
+                venta.save(update_fields=["total", "pagado"])
+
+            messages.success(request, f"Venta #{venta.id} creada (Total: {total})")
+            return redirect("venta_detalle", pk=venta.pk)
+
+    else:
+        form = VentaForm()
+
+    # ---- cálculo de arqueo ----
+    ventas_hoy = Venta.objects.filter(fecha__date=filtro_fecha, pagado=True)
+
+    total_efectivo = ventas_hoy.filter(metodo_pago="efectivo").aggregate(s=Sum("total"))["s"] or Decimal("0.00")
+    total_tarjeta = ventas_hoy.filter(metodo_pago="tarjeta").aggregate(s=Sum("total"))["s"] or Decimal("0.00")
+    total_transferencia = ventas_hoy.filter(metodo_pago="transferencia").aggregate(s=Sum("total"))["s"] or Decimal("0.00")
+    total_general = total_efectivo + total_tarjeta + total_transferencia
+
+    context = {
+        "form": form,
+        "today": today.isoformat(),
+        "total_efectivo": total_efectivo,
+        "total_tarjeta": total_tarjeta,
+        "total_transferencia": total_transferencia,
+        "total_general": total_general,
+        "filtro_fecha": filtro_fecha.isoformat(),
+    }
+    return render(request, "ventas/venta_crear.html", context)
+
+
+
+
+def venta_detalle(request, pk):
+    venta = get_object_or_404(Venta, pk=pk)
+    return render(request, "ventas/venta_detalle.html", {"venta": venta})
+
+
+def ventas_historial(request):
+    ventas = Venta.objects.all().order_by("-fecha")
+    return render(request, "ventas/ventas_historial.html", {"ventas": ventas})
+
+
+def repuesto_lookup(request):
+    q = request.GET.get("q", "").strip()
+    results = []
+
+    if q:
+        repuestos = RepuestoEnStock.objects.select_related("repuesto").filter(
+            Q(repuesto__nombre__icontains=q) |
+            Q(repuesto__sku__icontains=q) |
+            Q(repuesto__oem__icontains=q) |
+            Q(repuesto__codigo_barra__icontains=q) |
+            Q(repuesto__marca__icontains=q) |
+            Q(repuesto__descripcion__icontains=q)
+        )[:20]  # limitar a 20 resultados para que sea rápido
+
+        for r in repuestos:
+            text = f"{r.repuesto.sku or '-'} | {r.repuesto.nombre} | {r.repuesto.marca or ''} | Stock: {r.stock}"
+            results.append({
+                "id": r.id,   # ID de RepuestoEnStock
+                "repuesto_nombre": r.repuesto.nombre,  # Nombre del repuesto
+                "text": f"{r.repuesto.sku or '-'} | {r.repuesto.nombre} | {r.repuesto.marca or ''} | Stock: {r.stock}",
+                "stock": r.stock,  # Stock disponible
+                "deposito": r.deposito,  # Depósito
+                "precio_venta": r.precio_venta
+            })
+
+    print("results :",{"results": results})
+    return JsonResponse({"results": results})
+

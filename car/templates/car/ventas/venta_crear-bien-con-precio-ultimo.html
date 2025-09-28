@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h2>🛒 Nueva Venta</h2>
+
+<form method="post" id="venta-form">
+  {% csrf_token %}
+  <div class="row mb-3">
+    {{ form.as_p }}
+    <div class="col-md-8">
+      <label for="producto-search" class="form-label">Buscar repuesto (sku, oem, referencia, nombre, marca, código)</label>
+      <select id="producto-search" style="width:100%"></select>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button type="button" id="add-selected" class="btn btn-primary me-2">➕ Agregar</button>
+      <button type="button" id="clear-search" class="btn btn-light">Limpiar</button>
+    </div>
+  </div>
+
+  <h5>Productos</h5>
+  <span style="display: none;">{{ formset.management_form }}</span>
+  <table id="productos-table" class="table table-sm table-striped align-middle">
+    <thead>
+      <tr>
+        <th style="width:50%">Repuesto</th>
+        <th style="width:10%">Cant</th>
+        <th style="width:15%">Precio</th>
+        <th style="width:15%">Subtotal</th>
+        <th style="width:10%"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-filas agregan por JS ->
+      
+
+    </tbody>
+  </table>
+
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <div>
+      <small class="text-muted">Puedes buscar y agregar varios productos. La venta será procesada al guardar el formulario.</small>
+    </div>
+    <div>
+      <h4>Total: $ <span id="total">0.00</span></h4>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <button type="submit" class="btn btn-success">💾 Finalizar Venta</button>
+    <a href="{% url 'ventas_historial' %}" class="btn btn-secondary">Historial</a>
+  </div>
+</form>
+
+<!-- jQuery primero -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet"/>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+
+<script>
+/* ---------- Inicialización de select2 ---------- */
+function initProductSelect() {
+  $("#producto-search").select2({
+    placeholder: "Escribe para buscar repuestos...",
+    minimumInputLength: 1,
+    ajax: {
+      url: "{% url 'repuesto_lookup' %}",
+      dataType: "json",
+      delay: 250,
+      data: function(params) {
+        return { q: params.term || "" };
+      },
+      processResults: function(data) {
+        return { results: data.results };
+      },
+      error: function(xhr, status, error) {
+        console.error("Error en la búsqueda de repuestos:", error);
+      }
+    },
+    templateResult: function(item) {
+      if (!item.id) return item.text;
+      return $('<span>' + item.text + ' <small class="text-muted"> (stock: ' + item.stock + ') </small></span>');
+    },
+    escapeMarkup: function(markup) { return markup; },
+    width: "100%",
+  });
+}
+$(document).ready(function() {
+  initProductSelect();
+
+  /* ---------- Helpers ---------- */
+  function getTotalForms() {
+    return parseInt($('#id_form-TOTAL_FORMS').val());
+  }
+  function setTotalForms(n) {
+    $('#id_form-TOTAL_FORMS').val(n);
+  }
+  function calcularTotal() {
+    let total = 0;
+    $('.subtotal').each(function(){
+      total += parseFloat($(this).val() || 0);
+    });
+    $('#total').text(total.toFixed(2));
+  }
+
+  /* ---------- agregar fila desde objeto JSON ---------- */
+  function addRowFromData(data) {
+    // evitar duplicados (si ya existe el mismo repuesto_stock, aumentamos cantidad)
+    let found = null;
+    $('#productos-table tbody tr').each(function(){
+      const hiddenVal = $(this).find("input[name$='repuesto_stock']").val();
+      if (hiddenVal == data.id) { found = $(this); return false; }
+    });
+
+    if (found) {
+      // incrementar cantidad
+      let qtyInput = found.find("input[name$='cantidad']");
+      let newQty = parseInt(qtyInput.val() || 0) + 1;
+      qtyInput.val(newQty);
+      let price = parseFloat(found.find('.precio').val() || 0);
+      found.find('.subtotal').val((price * newQty).toFixed(2));
+      calcularTotal();
+      return;
+    }
+
+    // crear nueva fila con índices del formset
+    let idx = getTotalForms();
+    let prefix = 'form-' + idx + '-';
+
+    let tr = $('<tr/>');
+
+    // columna Repuesto (texto + hidden id)
+    let colRepuesto = $('<td/>');
+    colRepuesto.append(`<input type="hidden" name="${prefix}repuesto_stock" value="${data.id}">`);
+    colRepuesto.append(`<div><strong>${data.repuesto_nombre}</strong></div>`);
+    colRepuesto.append(`<div class="text-muted small">${data.text}</div>`);
+    colRepuesto.append(`<div class="text-muted small">Dep: ${data.deposito} — Stock: ${data.stock}</div>`);
+
+    // cantidad
+    let colCant = $(`<td><input type="number" name="${prefix}cantidad" value="1" min="1" class="form-control cantidad" style="width:100px"></td>`);
+
+    // precio_unitario
+    let precioVal = parseFloat(data.precio_venta).toFixed(2);  // Asegúrate de convertir a número
+    let colPrecio = $(`<td><input type="text" name="${prefix}precio_unitario" value="${precioVal}" readonly class="form-control precio" style="width:120px"></td>`);
+
+    // subtotal
+    let colSubtotal = $(`<td><input type="text" name="${prefix}subtotal" value="${precioVal}" readonly class="form-control subtotal" style="width:120px"></td>`);
+
+    // eliminar
+    let colDel = $(`<td><button type="button" class="btn btn-danger btn-sm remove-row">✖</button></td>`);
+
+    tr.append(colRepuesto, colCant, colPrecio, colSubtotal, colDel);
+    $('#productos-table tbody').append(tr);
+
+    setTotalForms(idx + 1);
+    calcularTotal();
+  }
+
+  /* ---------- Eventos ---------- */
+  // botón agregar (usa el elemento seleccionado en el select2)
+  $('#add-selected').on('click', function(){
+    const sel = $('#producto-search').select2('data')[0];
+    if (!sel) { alert('Selecciona un repuesto primero'); return; }
+    addRowFromData(sel);
+    // limpiar selector
+    $('#producto-search').val(null).trigger('change');
+  });
+
+  // doble click o ENTER para agregar rápido
+  $('#producto-search').on('select2:select', function(e){
+    addRowFromData(e.params.data);
+    $(this).val(null).trigger('change');
+  });
+
+  // eliminar fila
+  $(document).on('click', '.remove-row', function(){
+    $(this).closest('tr').remove();
+    calcularTotal();
+    // reducir TOTAL_FORMS
+    let newTotal = getTotalForms() - 1;
+    setTotalForms(Math.max(0, newTotal));
+  });
+
+  // actualizar subtotal cuando cambie cantidad
+  $(document).on('input', "input[name$='cantidad']", function(){
+    let row = $(this).closest('tr');
+    let cantidad = parseInt($(this).val() || 0);
+    let precio = parseFloat(row.find('.precio').val() || 0);
+    row.find('.subtotal').val((precio * cantidad).toFixed(2));
+    calcularTotal();
+  });
+
+  // inicializar total (por si hay filas ya)
+  calcularTotal();
+});
+</script>
+
+{% endblock %}

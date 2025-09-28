@@ -77,8 +77,14 @@ urlpatterns = [
     path("trabajos/<int:pk>/", views.trabajo_detalle, name="trabajo_detalle"),
     # Pizarra
     path("pizarra/", views.pizarra_view, name="pizarra"),
+    # Ventas
+    path("crear/", views.venta_crear, name="venta_crear"),
+    path("<int:pk>/", views.venta_detalle, name="venta_detalle"),
+    path("historial/", views.ventas_historial, name="ventas_historial"),
+    path("repuesto-lookup/", views.repuesto_lookup, name="repuesto_lookup"),
 
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 #if settings.DEBUG:

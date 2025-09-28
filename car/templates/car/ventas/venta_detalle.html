@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>🧾 Venta #{{ venta.id }}</h2>
+<p><strong>Cliente:</strong> {{ venta.cliente }}</p>
+<p><strong>Fecha:</strong> {{ venta.fecha }}</p>
+<p><strong>Método Pago:</strong> {{ venta.metodo_pago }}</p>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Repuesto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in venta.items.all %}
+      <tr>
+        <td>{{ i.repuesto_stock.repuesto.nombre }}</td>
+        <td>{{ i.cantidad }}</td>
+        <td>{{ i.precio_unitario }}</td>
+        <td>{{ i.subtotal }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<h3>Total: {{ venta.total }}</h3>
+<a href="javascript:history.go(-2)" class="btn btn-sm btn-warning mt-2">Regresar</a>
+{% endblock %}
+

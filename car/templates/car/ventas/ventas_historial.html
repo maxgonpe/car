@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>📜 Historial de Ventas</h2>
+<table class="table">
+  <thead>
+    <tr><th>ID</th><th>Fecha</th><th>Cliente</th><th>Total</th></tr>
+  </thead>
+  <tbody>
+    {% for v in ventas %}
+      <tr>
+        <td><a href="{% url 'venta_detalle' v.pk %}">#{{ v.id }}</a></td>
+        <td>{{ v.fecha }}</td>
+        <td>{{ v.cliente }}</td>
+        <td>{{ v.total }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<a href="javascript:history.back()" class="btn btn-sm btn-warning mt-2">Regresar</a>
+{% endblock %}

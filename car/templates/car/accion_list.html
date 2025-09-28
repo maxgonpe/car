@@ -3,9 +3,9 @@
 <h2>Acciones (verbos)</h2>
 
 <div class="d-flex gap-2 mb-2">
-  <a href="{% url 'accion_create' %}" class="btn btn-success">Nueva acción</a>
-  <a href="{% url 'comp_accion_list' %}" class="btn btn-outline-primary">Ir a Componente + Acción</a>
-  <a href="{% url 'panel_principal' %}" class="btn btn-warning">⬅️ Volver al panel</a>
+  <a href="{% url 'accion_create' %}" class="btn btn-success mt-2">Nueva acción</a>
+  <a href="{% url 'comp_accion_list' %}" class="btn btn-outline-primary mt-2">Ir a Componente + Acción</a>
+  <a href="javascript:history.back()" class="btn btn-sm btn-warning mt-2">⬅️ Volver al panel</a>
 </div>
 
 <input type="text" id="filterInput" class="form-control my-2" placeholder="Buscar acción..." value="{{ q|default:'' }}">

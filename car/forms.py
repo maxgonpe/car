@@ -1,7 +1,8 @@
 from django import forms
 from .models import Componente, Cliente, Vehiculo,\
                     Diagnostico,Accion, ComponenteAccion,\
-                    Mecanico, Trabajo, TrabajoFoto
+                    Mecanico, Trabajo, TrabajoFoto,\
+                    Venta, VentaItem
 
 class MecanicoForm(forms.ModelForm):
     class Meta:
@@ -121,3 +122,15 @@ class SubirFotoForm(forms.ModelForm):
     class Meta:
         model = TrabajoFoto
         fields = ["imagen", "descripcion"]
+
+
+
+class VentaForm(forms.ModelForm):
+    class Meta:
+        model = Venta
+        fields = ["cliente", "metodo_pago"]
+
+class VentaItemForm(forms.ModelForm):
+    class Meta:
+        model = VentaItem
+        fields = ["repuesto_stock", "cantidad", "precio_unitario", "subtotal"]

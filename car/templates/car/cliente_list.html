@@ -2,7 +2,8 @@
 {% block content %}
 <div class="container py-4">
   <h2>👥 Clientes</h2>
-  <a href="{% url 'cliente_create' %}" class="btn btn-primary mb-3">➕ Nuevo Cliente</a>
+  <a href="{% url 'cliente_create' %}" class="btn btn-sm btn-primary mb-3">➕ Nuevo Cliente</a>
+  <a href="javascript:history.back()" class="btn btn-sm btn-warning mb-3">⬅️ Volver al panel</a>
 
   <table class="table table-striped table-hover">
     <thead>

@@ -259,11 +259,10 @@ class Repuesto(models.Model):
     unidad = models.CharField(max_length=20, default='pieza')
     precio_costo = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     precio_venta = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    codigo_barra = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    stock = models.IntegerField(default=0)
     created = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
-
+    
     def save(self, *args, **kwargs):
         if not self.sku:
             self.sku = self.generate_sku()
@@ -304,6 +303,12 @@ class Repuesto(models.Model):
         referencia = get_random_string(length=4, allowed_chars="0123456789")
 
         return f"{tipo}-{marca}-{comp}-{referencia}"
+
+        #def __str__(self):
+        #return f"{self.nombre} ({self.codigo_barra or 'sin código'})"
+
+        def __str__(self):
+            return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
 
 class VehiculoVersion(models.Model):
     marca = models.CharField(max_length=80)
@@ -350,6 +355,9 @@ class RepuestoEnStock(models.Model):
     @property
     def disponible(self):
         return self.stock - (self.reservado or 0)
+
+    def __str__(self):
+        return f"{self.repuesto.nombre} (Stock: {self.stock})" 
 
 class StockMovimiento(models.Model):
     repuesto_stock = models.ForeignKey(RepuestoEnStock, on_delete=models.CASCADE, related_name='movimientos')
@@ -466,4 +474,44 @@ class TrabajoRepuesto(models.Model):
 
     def __str__(self):
         return f"{self.repuesto} (x{self.cantidad})"
+
+# ventas/models.py  (puedes ponerlo en la app extintores o crear app nueva "ventas")
+
+class Venta(models.Model):
+    fecha = models.DateTimeField(auto_now_add=True)
+    cliente = models.ForeignKey(Cliente, null=True, blank=True, on_delete=models.SET_NULL)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    pagado = models.BooleanField(default=False)
+    metodo_pago = models.CharField(max_length=20, choices=(
+        ("efectivo", "Efectivo"),
+        ("tarjeta", "Tarjeta"),
+        ("transferencia", "Transferencia"),
+    ), default="efectivo")
+
+    def __str__(self):
+        return f"Venta #{self.id} - {self.fecha.strftime('%d/%m/%Y %H:%M')}"
+
+
+class VentaItem(models.Model):
+    venta = models.ForeignKey(Venta, related_name="items", on_delete=models.CASCADE)
+    repuesto_stock = models.ForeignKey(RepuestoEnStock, on_delete=models.PROTECT)
+    cantidad = models.PositiveIntegerField(default=1)
+    precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def save(self, *args, **kwargs):
+        self.subtotal = (self.cantidad * self.precio_unitario)
+        super().save(*args, **kwargs)
+
+        # Descontar stock al guardar (solo si es nueva venta)
+        if self.venta.pagado:
+            self.repuesto_stock.stock -= self.cantidad
+            self.repuesto_stock.save()
+            StockMovimiento.objects.create(
+                repuesto_stock=self.repuesto_stock,
+                tipo="salida",
+                cantidad=self.cantidad,
+                motivo=f"Venta #{self.venta.id}"
+            )
 

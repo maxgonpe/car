@@ -38,22 +38,82 @@
     #plano-container svg { width:100%; height:auto; display:block; }
 
     /* ===== TEMAS DE COLOR ===== */
-    body.theme-rojo { background-color: #e74c3c !important; color: #333; }
-    body.theme-amarillo { background-color: #ffd95c !important; color: #333; }
-    body.theme-celeste { background-color: #3498db !important; color: #333; }
-    body.theme-gris { background-color: #767676 !important; color: #e0e0e0; }
+    body.theme-rojo {
+     font-size: 18px; 
+     font-weight: bold; 
+     background-color: #e74c3c !important; color: #0343CE; }
+    body.theme-amarillo {
+     font-size: 18px; 
+     font-weight: bold; 
+     background-color: #ffd95c !important; color: #175e23; }
+    body.theme-celeste {
+      font-size: 18px; 
+      font-weight: bold; 
+      background-color: #0343CE !important; color: #ff8904; }
+    body.theme-gris { 
+      font-size: 18px; 
+      font-weight: bold;
+      background-color: #767676 !important; color: #f8bed8; }
+
+
+
+    body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("{% static 'images/Logo1.svg' %}");
+    background-size: 35%; /* O 'contain', o un tamaño específico */
+    background-position: center;
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    opacity: 0.3; /* Ajusta la opacidad según sea necesario */
+    z-index: -1; /* Asegúrate de que esté detrás del contenido */
+}
+
+
+
 
     /* Navbar */
     .theme-rojo .navbar,
     .theme-amarillo .navbar,
     .theme-celeste .navbar,
     .theme-gris .navbar {
-      background-color: rgba(255,255,255,0.85) !important;
+      color: #333;
+      background-color: rgba(255,255,255,0.25) !important;
     }
 
     /* Cards y footer */
-    .theme-gris .card { background-color: #555; border: 1px solid #444; }
-    .theme-gris footer { background-color: #3a3a3a; color: #bbb; }
+
+    .theme-rojo .card {
+      color: #0343CE;
+      background-color: #F1948A;
+      border: 2px solid #444; }
+    
+    .theme-rojo footer { background-color: #E57373; color: #bbb; }
+
+    .theme-amarillo .card {
+      color: #175e23;
+      background-color: #fef9e7;
+      border: 2px solid #444; }
+    
+    .theme-amarillo footer { background-color: #FEE98B; color: #bbb; }
+
+
+    .theme-celeste .card {
+      color: #ff8904;
+      background-color: #9BCDED;
+      border: 2px solid #444; }
+    
+    .theme-celeste footer { background-color: #4F6AD6; color: #bbb; }
+
+    .theme-gris .card {
+      color: #f8bed8;
+      background-color: #555;
+      border: 2px solid #444; }
+    
+    .theme-gris footer { background-color: #959595; color: #bbb; }
 
     /* ==== Botones de selección de tema ==== */
     .theme-btn {
@@ -75,6 +135,27 @@
     body.theme-amarillo .btn { background-color: #f1c40f !important; color: #000 !important; border: 1px solid #000 !important; }
     body.theme-celeste .btn { background-color: #2980b9 !important; color: #fff !important; border: 1px solid #fff !important; }
     body.theme-gris .btn { background-color: #444 !important; color: #fff !important; border: 1px solid #fff !important; }
+
+    .nav-tabs {
+    background-color: transparent; /* Cambia este color según lo desees */
+}
+
+.nav-tabs .nav-link {
+    background-color: transparent; /* Para que el fondo sea transparente */
+    color: white; /* Color del texto de las pestañas */
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent; /* Color de fondo para la pestaña activa */
+    color: white; /* Color del texto de la pestaña activa */
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Color al pasar el mouse */
+}
+
+
+
   </style>
 
   {% endblock %}
@@ -85,7 +166,9 @@
   <nav class="navbar navbar-expand-lg mb-3 shadow-sm">
     <div class="container-fluid">
       <!-- Logo que lleva al inicio -->
-      <a class="navbar-brand fw-bold" href="{% url 'panel_principal' %}">🚗 CAR</a>
+      <a class="navbar-brand fw-bold" href="{% url 'panel_principal' %}">
+      <img src="{% static 'images/Logo2.png' %}" alt="Car Icon" style="height: 24px; width: auto;">
+      </a>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#carNavbar" aria-controls="carNavbar" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -154,7 +237,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="mt-auto py-3 bg-light border-top">
+  <footer class="mt-auto py-3  border-top">
     <div class="container text-center text-muted small">
       © {{ now|date:"Y" }} Taller Mecánico
     </div>
@@ -177,6 +260,17 @@
       setTheme(saved);
     });
   </script>
+
+  <!-- jQuery primero -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <!-- Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+
 
   {% block extra_js %}
     <script src="{% static 'js/plano-interactivo.js' %}"></script>

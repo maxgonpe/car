@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<h2>🛒 Nueva Venta</h2>
+
+<form method="post" id="ventaForm">
+  {% csrf_token %}
+  {{ form.as_p }}
+
+  <h3>Productos</h3>
+  {{ formset.management_form }}
+  <table class="table table-sm" id="productosTable">
+    <thead>
+      <tr>
+        <th>Repuesto</th>
+        <th>Cantidad</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in formset %}
+        <tr class="producto-form">
+          <td>{{ f.repuesto_stock }}</td>
+          <td>{{ f.cantidad }}</td>
+          <td>
+            <button type="button" class="btn btn-danger btn-sm remove-row">❌</button>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <button type="button" class="btn btn-primary btn-sm" id="addRow">➕ Agregar producto</button>
+  <hr>
+  <button type="submit" class="btn btn-success">💾 Finalizar Venta</button>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const addRowBtn = document.getElementById("addRow");
+  const tableBody = document.querySelector("#productosTable tbody");
+  let totalForms = document.getElementById("id_form-TOTAL_FORMS");
+
+  addRowBtn.addEventListener("click", function () {
+    const formIndex = totalForms.value;
+    const emptyRow = document.querySelector(".producto-form").cloneNode(true);
+
+    // Limpia los valores
+    emptyRow.querySelectorAll("input, select").forEach(input => {
+      input.name = input.name.replace(/-\d+-/, `-${formIndex}-`);
+      input.id = input.id.replace(/-\d+-/, `-${formIndex}-`);
+      if (input.type === "number" || input.tagName === "SELECT") {
+        input.value = "";
+      }
+    });
+
+    // Inserta en tabla
+    tableBody.appendChild(emptyRow);
+    totalForms.value = parseInt(totalForms.value) + 1;
+  });
+
+  // Eliminar fila
+  tableBody.addEventListener("click", function (e) {
+    if (e.target.classList.contains("remove-row")) {
+      e.target.closest("tr").remove();
+    }
+  });
+});
+</script>
+{% endblock %}

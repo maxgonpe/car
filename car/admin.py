@@ -5,7 +5,8 @@ from .models import (
     Trabajo, TrabajoAccion, TrabajoRepuesto,TrabajoFoto,
     Componente, Accion, ComponenteAccion,
     Repuesto, RepuestoEnStock, StockMovimiento,
-    VehiculoVersion, ComponenteRepuesto, RepuestoAplicacion
+    VehiculoVersion, ComponenteRepuesto, RepuestoAplicacion,
+    Venta, VentaItem
 )
 
 @admin.register(Mecanico)
@@ -128,3 +129,5 @@ admin.site.register(RepuestoAplicacion)
 #admin.site.register(TrabajoAccion)
 admin.site.register(TrabajoFoto)
 admin.site.register(TrabajoRepuesto)
+admin.site.register(Venta)
+admin.site.register(VentaItem)
