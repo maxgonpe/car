@@ -8,13 +8,15 @@ charset-normalizer==3.4.3
 crispy-bootstrap5==2025.6
 cssselect2==0.8.0
 defusedxml==0.7.1
-Django==5.2.5
+Django>=4.2,<5.0
 django-crispy-forms==2.4
 django-extensions==4.1
 et_xmlfile==2.0.0
+gunicorn>=21.2
 idna==3.10
 openpyxl==3.1.5
 pillow==11.3.0
+psycopg2-binary>=2.9
 pycparser==2.22
 reportlab==4.4.3
 requests==2.32.5

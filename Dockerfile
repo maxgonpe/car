@@ -16,11 +16,22 @@ COPY requirements.txt /app/
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir --upgrade pip && pip install -r requirements.txt
 
+
+# EntryPoint
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Asegúrate que settings apunten bien
+ENV DJANGO_SETTINGS_MODULE=myproject.settings
+
+ENTRYPOINT ["/start.sh"]
+
+
 # Copiar el resto del proyecto dentro del contenedor
 COPY . /app/
 
 # Recoger archivos estáticos (puede ejecutarse también en runtime si prefieres)
-RUN python3 manage.py collectstatic --noinput
+#RUN python3 manage.py collectstatic --noinput
 
 # Comando de inicio: Gunicorn usando socket Unix
 #CMD ["gunicorn", "--bind", "unix:/app/myproject.sock", "myproject.wsgi:application"]
