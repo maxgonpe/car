@@ -37,26 +37,26 @@
     #plano-container svg [data-part]:hover { outline: 2px dashed rgba(0,0,0,.15); outline-offset: 2px; }
     #plano-container svg { width:100%; height:auto; display:block; }
 
-    /* ===== TEMAS DE COLOR ===== */
-    body.theme-rojo {
-     font-size: 18px; 
-     font-weight: bold; 
-     background-color: #e74c3c !important; color: #0343CE; }
-    body.theme-amarillo {
-     font-size: 18px; 
-     font-weight: bold; 
-     background-color: #ffd95c !important; color: #175e23; }
-    body.theme-celeste {
-      font-size: 18px; 
-      font-weight: bold; 
-      background-color: #0343CE !important; color: #ff8904; }
-    body.theme-gris { 
-      font-size: 18px; 
-      font-weight: bold;
-      background-color: #767676 !important; color: #f8bed8; }
+    /* ===== TEMAS DE COLOR (elegantes, mitad claros / mitad oscuros) ===== */
+    /*
+      Definimos variables por tema para fondo, texto, tarjetas, footer y botones.
+      4 temas oscuros: navy, charcoal, forest, plum
+      4 temas claros: porcelain, sand, sage, sky
+    */
+    :root { --bg:#ffffff; --fg:#1f2937; --card-bg:#ffffff; --muted:#6b7280; --footer-bg:#f8f9fa; --btn-bg:#334155; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body { font-size: 17px; font-weight: 500; background-color: var(--bg) !important; color: var(--fg); }
 
+    /* Oscuros */
+    body.theme-navy      { --bg:#0f172a; --fg:#e5e7eb; --card-bg:#1f2937; --muted:#cbd5e1; --footer-bg:#1f2937; --btn-bg:#334155; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    body.theme-charcoal  { --bg:#111827; --fg:#e5e7eb; --card-bg:#1f2937; --muted:#cbd5e1; --footer-bg:#1f2937; --btn-bg:#374151; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    body.theme-forest    { --bg:#0b3d2e; --fg:#e7f6ef; --card-bg:#124734; --muted:#cce7dd; --footer-bg:#103c2f; --btn-bg:#17624b; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    body.theme-plum      { --bg:#2c1b3a; --fg:#f0e9f7; --card-bg:#3a2749; --muted:#dbc9ef; --footer-bg:#342046; --btn-bg:#51306d; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
 
-
+    /* Claros */
+    body.theme-porcelain { --bg:#f7f7f7; --fg:#1f2937; --card-bg:#ffffff; --muted:#6b7280; --footer-bg:#f0f0f0; --btn-bg:#334155; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body.theme-sand      { --bg:#f5efe6; --fg:#1f2937; --card-bg:#ffffff; --muted:#6b7280; --footer-bg:#efe7dd; --btn-bg:#6b7280; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body.theme-sage      { --bg:#eef4f1; --fg:#1f2937; --card-bg:#ffffff; --muted:#586f63; --footer-bg:#e6eeea; --btn-bg:#5b7f71; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body.theme-sky       { --bg:#f3f6fb; --fg:#1f2937; --card-bg:#ffffff; --muted:#64748b; --footer-bg:#e9eef7; --btn-bg:#3b82f6; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
     body::before {
     content: '';
     position: absolute;
@@ -76,83 +76,49 @@
 
 
     /* Navbar */
-    .theme-rojo .navbar,
-    .theme-amarillo .navbar,
-    .theme-celeste .navbar,
-    .theme-gris .navbar {
-      color: #333;
-      background-color: rgba(255,255,255,0.25) !important;
+    /* Navbar (ligera superposición para legibilidad) */
+    .navbar {
+      color: var(--fg);
+      background-color: rgba(255,255,255,0.20) !important;
+      backdrop-filter: saturate(120%) blur(4px);
     }
+    .navbar .navbar-brand,
+    .navbar .nav-link,
+    .navbar .navbar-text { color: var(--fg) !important; }
+    .navbar .nav-link:hover,
+    .navbar .nav-link:focus { color: var(--fg) !important; opacity: 0.85; }
 
     /* Cards y footer */
 
-    .theme-rojo .card {
-      color: #0343CE;
-      background-color: #F1948A;
-      border: 2px solid #444; }
-    
-    .theme-rojo footer { background-color: #E57373; color: #bbb; }
-
-    .theme-amarillo .card {
-      color: #175e23;
-      background-color: #fef9e7;
-      border: 2px solid #444; }
-    
-    .theme-amarillo footer { background-color: #FEE98B; color: #bbb; }
-
-
-    .theme-celeste .card {
-      color: #ff8904;
-      background-color: #9BCDED;
-      border: 2px solid #444; }
-    
-    .theme-celeste footer { background-color: #4F6AD6; color: #bbb; }
-
-    .theme-gris .card {
-      color: #f8bed8;
-      background-color: #555;
-      border: 2px solid #444; }
-    
-    .theme-gris footer { background-color: #959595; color: #bbb; }
+    /* Cards y footer en función de variables */
+    .card { color: var(--fg); background-color: var(--card-bg); border: 1px solid rgba(0,0,0,.12); }
+    footer { background-color: var(--footer-bg); color: var(--muted); }
 
     /* ==== Botones de selección de tema ==== */
     .theme-btn {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      cursor: pointer;
-      display: inline-block;
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.85);
+      cursor: pointer; display: inline-block; transition: transform .12s ease;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.07) inset;
     }
-    .theme-btn:hover { transform: scale(1.2); }
-    .theme-btn.rojo { background-color: #e74c3c; }
-    .theme-btn.amarillo { background-color: #ffd95c; }
-    .theme-btn.celeste { background-color: #3498db; }
-    .theme-btn.gris { background-color: #767676; }
+    .theme-btn:hover { transform: scale(1.12); }
+    /* Muestras de color */
+    .theme-btn.navy      { background-color: #0f172a; }
+    .theme-btn.charcoal  { background-color: #111827; }
+    .theme-btn.forest    { background-color: #0b3d2e; }
+    .theme-btn.plum      { background-color: #2c1b3a; }
+    .theme-btn.porcelain { background-color: #f7f7f7; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sand      { background-color: #f5efe6; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sage      { background-color: #eef4f1; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sky       { background-color: #f3f6fb; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
 
-    /* ===== Contraste de botones ===== */
-    body.theme-rojo .btn { background-color: #c0392b !important; color: #fff !important; border: 1px solid #fff !important; }
-    body.theme-amarillo .btn { background-color: #f1c40f !important; color: #000 !important; border: 1px solid #000 !important; }
-    body.theme-celeste .btn { background-color: #2980b9 !important; color: #fff !important; border: 1px solid #fff !important; }
-    body.theme-gris .btn { background-color: #444 !important; color: #fff !important; border: 1px solid #fff !important; }
+    /* ===== Botones Bootstrap con buen contraste por tema ===== */
+    .btn { background-color: var(--btn-bg) !important; color: var(--btn-fg) !important; border: 1px solid var(--btn-fg) !important; }
 
-    .nav-tabs {
-    background-color: transparent; /* Cambia este color según lo desees */
-}
-
-.nav-tabs .nav-link {
-    background-color: transparent; /* Para que el fondo sea transparente */
-    color: white; /* Color del texto de las pestañas */
-}
-
-.nav-tabs .nav-link.active {
-    background-color: transparent; /* Color de fondo para la pestaña activa */
-    color: white; /* Color del texto de la pestaña activa */
-}
-
-.nav-tabs .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1); /* Color al pasar el mouse */
-}
+    .nav-tabs { background-color: transparent; }
+    .nav-tabs .nav-link { background-color: transparent; color: var(--fg); }
+    .nav-tabs .nav-link.active { background-color: transparent; color: var(--fg); }
+    .nav-tabs .nav-link:hover { background-color: var(--hover-bg); }
 
 
 
@@ -183,14 +149,20 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'componente_list' %}">Componentes</a></li>
         </ul>
 
-        <!-- Botones de tema -->
+        <!-- Botones de tema (4 oscuros + 4 claros) -->
         <ul class="navbar-nav ms-auto">
           <li class="nav-item d-flex align-items-center">
             <span class="me-2">🎨</span>
-            <span class="theme-btn rojo me-1" onclick="setTheme('rojo')"></span>
-            <span class="theme-btn amarillo me-1" onclick="setTheme('amarillo')"></span>
-            <span class="theme-btn celeste me-1" onclick="setTheme('celeste')"></span>
-            <span class="theme-btn gris" onclick="setTheme('gris')"></span>
+            <!-- Oscuros -->
+            <span class="theme-btn navy me-1" title="Navy (oscuro)" role="button" aria-label="Tema navy" onclick="setTheme('navy')"></span>
+            <span class="theme-btn charcoal me-1" title="Charcoal (oscuro)" role="button" aria-label="Tema charcoal" onclick="setTheme('charcoal')"></span>
+            <span class="theme-btn forest me-1" title="Forest (oscuro)" role="button" aria-label="Tema forest" onclick="setTheme('forest')"></span>
+            <span class="theme-btn plum me-2" title="Plum (oscuro)" role="button" aria-label="Tema plum" onclick="setTheme('plum')"></span>
+            <!-- Claros -->
+            <span class="theme-btn porcelain me-1" title="Porcelain (claro)" role="button" aria-label="Tema porcelain" onclick="setTheme('porcelain')"></span>
+            <span class="theme-btn sand me-1" title="Sand (claro)" role="button" aria-label="Tema sand" onclick="setTheme('sand')"></span>
+            <span class="theme-btn sage me-1" title="Sage (claro)" role="button" aria-label="Tema sage" onclick="setTheme('sage')"></span>
+            <span class="theme-btn sky" title="Sky (claro)" role="button" aria-label="Tema sky" onclick="setTheme('sky')"></span>
           </li>
         </ul>
         <!-- Usuario -->
@@ -249,14 +221,29 @@
   <script>
     // -------- Script de selección de tema --------
     function setTheme(theme) {
+      // Compatibilidad: nombres antiguos -> nuevos
+      const legacyToNew = { rojo: 'plum', amarillo: 'sand', celeste: 'sky', gris: 'charcoal' };
+      const newToLegacy = { plum: 'rojo', sand: 'amarillo', sky: 'celeste', charcoal: 'gris' };
+      const finalTheme = legacyToNew[theme] || theme; // si pasan viejo, lo mapeamos
+
+      // Limpia clases previas de tema
       document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
-      document.body.classList.add(`theme-${theme}`);
-      localStorage.setItem("theme", theme);
+
+      // Agrega clase del tema nuevo
+      document.body.classList.add(`theme-${finalTheme}`);
+
+      // Agrega también la clase alias antigua (si existe) para CSS legado
+      const legacyAlias = newToLegacy[finalTheme];
+      if (legacyAlias) {
+        document.body.classList.add(`theme-${legacyAlias}`);
+      }
+
+      localStorage.setItem("theme", finalTheme);
     }
 
     // Restaurar tema guardado
     document.addEventListener("DOMContentLoaded", function() {
-      const saved = localStorage.getItem("theme") || "rojo"; // por defecto rojo
+      const saved = localStorage.getItem("theme") || "porcelain"; // por defecto claro y elegante
       setTheme(saved);
     });
   </script>
