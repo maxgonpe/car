@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es" class="h-100">
+{% load static %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Taller Mecánico{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  {% block extra_head %}
+    <style>
+    html, body { height: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+
+    .app-navbar { position: sticky; top: 0; z-index: 1020; }
+    .messages { margin-top: .75rem; }
+
+    /* --- Estilos para summary --- */
+    details summary { cursor: pointer; user-select: none; list-style: none; position: relative; padding-left: 1.25rem; outline: none; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::marker { content: ""; }
+    details summary::before { content: "►"; position: absolute; left: 0; top: .1rem; font-size: .9em; transition: transform .2s ease; }
+    details[open] > summary::before { content: "▼"; }
+
+    details summary:focus-visible,
+    [tabindex]:focus-visible,
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid rgba(20, 47, 109, .35);
+      outline-offset: 2px;
+      border-radius: .5rem;
+    }
+
+    #plano-container svg [data-part] { cursor: pointer; }
+    #plano-container svg [data-part]:hover { outline: 2px dashed rgba(0,0,0,.15); outline-offset: 2px; }
+    #plano-container svg { width:100%; height:auto; display:block; }
+
+    /* ===== TEMAS DE COLOR ===== */
+    body.theme-rojo {
+     font-size: 18px; 
+     font-weight: bold; 
+     background-color: #e74c3c !important; color: #0343CE; }
+    body.theme-amarillo {
+     font-size: 18px; 
+     font-weight: bold; 
+     background-color: #ffd95c !important; color: #175e23; }
+    body.theme-celeste {
+      font-size: 18px; 
+      font-weight: bold; 
+      background-color: #0343CE !important; color: #ff8904; }
+    body.theme-gris { 
+      font-size: 18px; 
+      font-weight: bold;
+      background-color: #767676 !important; color: #f8bed8; }
+
+
+
+    body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("{% static 'images/Logo1.svg' %}");
+    background-size: 35%; /* O 'contain', o un tamaño específico */
+    background-position: center;
+    background-repeat: no-repeat; /* Evita que la imagen se repita */
+    opacity: 0.3; /* Ajusta la opacidad según sea necesario */
+    z-index: -1; /* Asegúrate de que esté detrás del contenido */
+}
+
+
+
+
+    /* Navbar */
+    .theme-rojo .navbar,
+    .theme-amarillo .navbar,
+    .theme-celeste .navbar,
+    .theme-gris .navbar {
+      color: #333;
+      background-color: rgba(255,255,255,0.25) !important;
+    }
+
+    /* Cards y footer */
+
+    .theme-rojo .card {
+      color: #0343CE;
+      background-color: #F1948A;
+      border: 2px solid #444; }
+    
+    .theme-rojo footer { background-color: #E57373; color: #bbb; }
+
+    .theme-amarillo .card {
+      color: #175e23;
+      background-color: #fef9e7;
+      border: 2px solid #444; }
+    
+    .theme-amarillo footer { background-color: #FEE98B; color: #bbb; }
+
+
+    .theme-celeste .card {
+      color: #ff8904;
+      background-color: #9BCDED;
+      border: 2px solid #444; }
+    
+    .theme-celeste footer { background-color: #4F6AD6; color: #bbb; }
+
+    .theme-gris .card {
+      color: #f8bed8;
+      background-color: #555;
+      border: 2px solid #444; }
+    
+    .theme-gris footer { background-color: #959595; color: #bbb; }
+
+    /* ==== Botones de selección de tema ==== */
+    .theme-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      display: inline-block;
+    }
+    .theme-btn:hover { transform: scale(1.2); }
+    .theme-btn.rojo { background-color: #e74c3c; }
+    .theme-btn.amarillo { background-color: #ffd95c; }
+    .theme-btn.celeste { background-color: #3498db; }
+    .theme-btn.gris { background-color: #767676; }
+
+    /* ===== Contraste de botones ===== */
+    body.theme-rojo .btn { background-color: #c0392b !important; color: #fff !important; border: 1px solid #fff !important; }
+    body.theme-amarillo .btn { background-color: #f1c40f !important; color: #000 !important; border: 1px solid #000 !important; }
+    body.theme-celeste .btn { background-color: #2980b9 !important; color: #fff !important; border: 1px solid #fff !important; }
+    body.theme-gris .btn { background-color: #444 !important; color: #fff !important; border: 1px solid #fff !important; }
+
+    .nav-tabs {
+    background-color: transparent; /* Cambia este color según lo desees */
+}
+
+.nav-tabs .nav-link {
+    background-color: transparent; /* Para que el fondo sea transparente */
+    color: white; /* Color del texto de las pestañas */
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent; /* Color de fondo para la pestaña activa */
+    color: white; /* Color del texto de la pestaña activa */
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Color al pasar el mouse */
+}
+
+
+
+  </style>
+
+  {% endblock %}
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg mb-3 shadow-sm">
+    <div class="container-fluid">
+      <!-- Logo que lleva al inicio -->
+      <a class="navbar-brand fw-bold" href="{% url 'panel_principal' %}">
+      <img src="{% static 'images/Logo2.png' %}" alt="Car Icon" style="height: 24px; width: auto;">
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#carNavbar" aria-controls="carNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="carNavbar">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="{% url 'ingreso' %}">Ingresar diagnóstico</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'lista_diagnosticos' %}">Diagnósticos</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accion_list' %}">Acciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'comp_accion_list' %}">Componente + Acción</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'componente_list' %}">Componentes</a></li>
+        </ul>
+
+        <!-- Botones de tema -->
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item d-flex align-items-center">
+            <span class="me-2">🎨</span>
+            <span class="theme-btn rojo me-1" onclick="setTheme('rojo')"></span>
+            <span class="theme-btn amarillo me-1" onclick="setTheme('amarillo')"></span>
+            <span class="theme-btn celeste me-1" onclick="setTheme('celeste')"></span>
+            <span class="theme-btn gris" onclick="setTheme('gris')"></span>
+          </li>
+        </ul>
+        <!-- Usuario -->
+<ul class="navbar-nav ms-auto">
+  {% if user.is_authenticated %}
+    <li class="nav-item d-flex align-items-center me-2">
+      <span class="fw-bold">👋 {{ user.username }}</span>
+    </li>
+    <li class="nav-item">
+      <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Salir</a>
+    </li>
+  {% else %}
+    <li class="nav-item">
+      <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">Ingresar</a>
+    </li>
+  {% endif %}
+
+  
+</ul>
+
+
+
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenido -->
+  <main class="flex-grow-1">
+    <div class="container">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto py-3  border-top">
+    <div class="container text-center text-muted small">
+      © {{ now|date:"Y" }} Taller Mecánico
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // -------- Script de selección de tema --------
+    function setTheme(theme) {
+      document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
+      document.body.classList.add(`theme-${theme}`);
+      localStorage.setItem("theme", theme);
+    }
+
+    // Restaurar tema guardado
+    document.addEventListener("DOMContentLoaded", function() {
+      const saved = localStorage.getItem("theme") || "rojo"; // por defecto rojo
+      setTheme(saved);
+    });
+  </script>
+
+  <!-- jQuery primero -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <!-- Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+
+
+  {% block extra_js %}
+    <script src="{% static 'js/plano-interactivo.js' %}"></script>
+  {% endblock %}
+</body>
+</html>
+

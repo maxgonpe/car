@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block content %}
+<div class="container py-4">
+  <h2>{{ view.object|default:"Nuevo Repuesto" }}</h2>
+  <form method="post">{% csrf_token %}
+    {{ form|crispy }}
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'repuesto_list' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}
+

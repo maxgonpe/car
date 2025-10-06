@@ -247,21 +247,6 @@ class DiagnosticoComponenteAccion(models.Model):
         super().save(*args, **kwargs)
 
 
-class PrefijoRepuesto(models.Model):
-    palabra = models.CharField(
-        max_length=100, unique=True,
-        help_text="Palabra clave a buscar en el nombre o posición (ej. 'freno')"
-    )
-    abreviatura = models.CharField(
-        max_length=10,
-        help_text="Abreviatura para el SKU (ej. 'FRE')"
-    )
-
-    def __str__(self):
-        return f"{self.palabra} → {self.abreviatura}"
-
-
-
 class Repuesto(models.Model):
     sku = models.CharField(max_length=64, unique=True, blank=True, null=True)  # código interno
     oem = models.CharField(max_length=64, blank=True, null=True)               # OEM / fabricante
@@ -284,33 +269,46 @@ class Repuesto(models.Model):
         super().save(*args, **kwargs)
 
     def generate_sku(self):
-        # Texto base donde buscamos coincidencias
-        base_text = f"{self.nombre} {self.posicion}".lower()
+        # === Diccionario opcional de prefijos conocidos ===
+        prefijos = {
+            "freno": "FRE",
+            "filtro": "FIL",
+            "aceite": "OIL",
+            "bujía": "BUJ",
+            "batería": "BAT",
+            "amortiguador": "AMO",
+            "correa": "COR",
+            "embrague": "EMB",
+        }
 
-        # Buscar en la base de datos PrefijoRepuesto
+        # === Detectar prefijo ===
+        base_text = f"{self.nombre} {self.posicion}".lower()
         tipo = None
-        for prefijo in PrefijoRepuesto.objects.all():
-            if prefijo.palabra.lower() in base_text:
-                tipo = prefijo.abreviatura.upper()
+        for k, v in prefijos.items():
+            if k in base_text:
+                tipo = v
                 break
 
         if not tipo:
-            # Si no hay prefijo definido, usar primeras 3 letras del nombre
+            # Si no hay prefijo definido, tomar primeras letras del nombre
             tipo = (self.nombre[:3].upper() if self.nombre else "GEN")
 
-        # Marca abreviada
+        # === Marca abreviada ===
         marca = (self.marca[:3].upper() if self.marca else "GEN")
 
-        # Posición abreviada
+        # === Posición o componente abreviado ===
         comp = (self.posicion[:3].upper() if self.posicion else "REP")
 
-        # Secuencia aleatoria numérica
+        # === Secuencia aleatoria numérica (4 dígitos) ===
         referencia = get_random_string(length=4, allowed_chars="0123456789")
 
         return f"{tipo}-{marca}-{comp}-{referencia}"
 
-    def __str__(self):
-        return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
+        #def __str__(self):
+        #return f"{self.nombre} ({self.codigo_barra or 'sin código'})"
+
+        def __str__(self):
+            return f"{self.nombre} ({self.sku or self.oem or 'sin-cod'})"
 
 class VehiculoVersion(models.Model):
     marca = models.CharField(max_length=80)

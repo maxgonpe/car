@@ -10,14 +10,14 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
   {% block extra_head %}
-    <style>
+  <style>
     html, body { height: 100%; }
     body { -webkit-tap-highlight-color: transparent; }
 
     .app-navbar { position: sticky; top: 0; z-index: 1020; }
     .messages { margin-top: .75rem; }
 
-    /* --- Estilos para summary --- */
+    /* Estilos para summary */
     details summary { cursor: pointer; user-select: none; list-style: none; position: relative; padding-left: 1.25rem; outline: none; }
     details summary::-webkit-details-marker { display: none; }
     details summary::marker { content: ""; }
@@ -37,127 +37,82 @@
     #plano-container svg [data-part]:hover { outline: 2px dashed rgba(0,0,0,.15); outline-offset: 2px; }
     #plano-container svg { width:100%; height:auto; display:block; }
 
-    /* ===== TEMAS DE COLOR ===== */
-    body.theme-rojo {
-     font-size: 18px; 
-     font-weight: bold; 
-     background-color: #e74c3c !important; color: #0343CE; }
-    body.theme-amarillo {
-     font-size: 18px; 
-     font-weight: bold; 
-     background-color: #ffd95c !important; color: #175e23; }
-    body.theme-celeste {
-      font-size: 18px; 
-      font-weight: bold; 
-      background-color: #0343CE !important; color: #ff8904; }
-    body.theme-gris { 
-      font-size: 18px; 
-      font-weight: bold;
-      background-color: #767676 !important; color: #f8bed8; }
+    /* Temas de color */
+    :root { --bg:#ffffff; --fg:#1f2937; --card-bg:#ffffff; --muted:#6b7280; --footer-bg:#f8f9fa; --btn-bg:#334155; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
 
+    body { font-size: 17px; font-weight: 500; background-color: var(--bg) !important; color: var(--fg); }
 
+    /* Temas oscuros */
+    body.theme-piedra      { --bg:#2a374e; --fg:#e6e6e6; --card-bg:#3c4a6a; --muted:#b0c4de; --footer-bg:#3c4a6a; --btn-bg:#4a6b8a; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    
+    body.theme-charcoal  { --bg:#111827; --fg:#e5e7eb; --card-bg:#1f2937; --muted:#cbd5e1; --footer-bg:#1f2937; --btn-bg:#374151; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    body.theme-forest    { --bg:#0b3d2e; --fg:#e7f6ef; --card-bg:#124734; --muted:#cce7dd; --footer-bg:#103c2f; --btn-bg:#17624b; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
+    body.theme-plum      { --bg:#2c1b3a; --fg:#f0e9f7; --card-bg:#3a2749; --muted:#dbc9ef; --footer-bg:#342046; --btn-bg:#51306d; --btn-fg:#ffffff; --hover-bg:rgba(255,255,255,.08); }
 
+    /* Temas claros */
+
+    body.theme-cyan      { --bg:#e0f7fa; --fg:#006064; --card-bg:#ffffff; --muted:#b2ebf2; --footer-bg:#b2ebf2; --btn-bg:#00838f; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+
+    body.theme-sand      { --bg:#f5efe6; --fg:#1f2937; --card-bg:#ffffff; --muted:#6b7280; --footer-bg:#efe7dd; --btn-bg:#6b7280; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body.theme-sage      { --bg:#eef4f1; --fg:#1f2937; --card-bg:#ffffff; --muted:#586f63; --footer-bg:#e6eeea; --btn-bg:#5b7f71; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    body.theme-sky       { --bg:#f3f6fb; --fg:#1f2937; --card-bg:#ffffff; --muted:#64748b; --footer-bg:#e9eef7; --btn-bg:#3b82f6; --btn-fg:#ffffff; --hover-bg:rgba(0,0,0,.06); }
+    
+    /* Fondo común con logo */
     body::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("{% static 'images/Logo1.svg' %}");
-    background-size: 35%; /* O 'contain', o un tamaño específico */
-    background-position: center;
-    background-repeat: no-repeat; /* Evita que la imagen se repita */
-    opacity: 0.3; /* Ajusta la opacidad según sea necesario */
-    z-index: -1; /* Asegúrate de que esté detrás del contenido */
-}
-
-
-
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url("{% static 'images/Logo1.svg' %}");
+      background-size: 35%; /* O 'contain', o un tamaño específico */
+      background-position: center;
+      background-repeat: no-repeat; /* Evita que la imagen se repita */
+      opacity: 0.3; /* Ajusta la opacidad según sea necesario */
+      z-index: -1; /* Asegúrate de que esté detrás del contenido */
+    }
 
     /* Navbar */
-    .theme-rojo .navbar,
-    .theme-amarillo .navbar,
-    .theme-celeste .navbar,
-    .theme-gris .navbar {
-      color: #333;
-      background-color: rgba(255,255,255,0.25) !important;
+    .navbar {
+      color: var(--fg);
+      background-color: rgba(255,255,255,0.20) !important;
+      backdrop-filter: saturate(120%) blur(4px);
     }
+    .navbar .navbar-brand,
+    .navbar .nav-link,
+    .navbar .navbar-text { color: var(--fg) !important; }
+    .navbar .nav-link:hover,
+    .navbar .nav-link:focus { color: var(--fg) !important; opacity: 0.85; }
 
     /* Cards y footer */
+    .card { color: var(--fg); background-color: var(--card-bg); border: 1px solid rgba(0,0,0,.12); }
+    footer { background-color: var(--footer-bg); color: var(--muted); }
 
-    .theme-rojo .card {
-      color: #0343CE;
-      background-color: #F1948A;
-      border: 2px solid #444; }
-    
-    .theme-rojo footer { background-color: #E57373; color: #bbb; }
-
-    .theme-amarillo .card {
-      color: #175e23;
-      background-color: #fef9e7;
-      border: 2px solid #444; }
-    
-    .theme-amarillo footer { background-color: #FEE98B; color: #bbb; }
-
-
-    .theme-celeste .card {
-      color: #ff8904;
-      background-color: #9BCDED;
-      border: 2px solid #444; }
-    
-    .theme-celeste footer { background-color: #4F6AD6; color: #bbb; }
-
-    .theme-gris .card {
-      color: #f8bed8;
-      background-color: #555;
-      border: 2px solid #444; }
-    
-    .theme-gris footer { background-color: #959595; color: #bbb; }
-
-    /* ==== Botones de selección de tema ==== */
+    /* Botones de selección de tema */
     .theme-btn {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      cursor: pointer;
-      display: inline-block;
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.85);
+      cursor: pointer; display: inline-block; transition: transform .12s ease;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.07) inset;
     }
-    .theme-btn:hover { transform: scale(1.2); }
-    .theme-btn.rojo { background-color: #e74c3c; }
-    .theme-btn.amarillo { background-color: #ffd95c; }
-    .theme-btn.celeste { background-color: #3498db; }
-    .theme-btn.gris { background-color: #767676; }
+    .theme-btn:hover { transform: scale(1.12); }
+    .theme-btn.piedra      { background-color: #111827; }
+    .theme-btn.charcoal  { background-color: #111827; }
+    .theme-btn.forest    { background-color: #0b3d2e; }
+    .theme-btn.plum      { background-color: #2c1b3a; }
+    .theme-btn.cyan { background-color: #f7f7f7; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sand      { background-color: #f5efe6; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sage      { background-color: #eef4f1; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
+    .theme-btn.sky       { background-color: #f3f6fb; box-shadow: 0 0 0 1px rgba(0,0,0,.15) inset; }
 
-    /* ===== Contraste de botones ===== */
-    body.theme-rojo .btn { background-color: #c0392b !important; color: #fff !important; border: 1px solid #fff !important; }
-    body.theme-amarillo .btn { background-color: #f1c40f !important; color: #000 !important; border: 1px solid #000 !important; }
-    body.theme-celeste .btn { background-color: #2980b9 !important; color: #fff !important; border: 1px solid #fff !important; }
-    body.theme-gris .btn { background-color: #444 !important; color: #fff !important; border: 1px solid #fff !important; }
-
-    .nav-tabs {
-    background-color: transparent; /* Cambia este color según lo desees */
-}
-
-.nav-tabs .nav-link {
-    background-color: transparent; /* Para que el fondo sea transparente */
-    color: white; /* Color del texto de las pestañas */
-}
-
-.nav-tabs .nav-link.active {
-    background-color: transparent; /* Color de fondo para la pestaña activa */
-    color: white; /* Color del texto de la pestaña activa */
-}
-
-.nav-tabs .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1); /* Color al pasar el mouse */
-}
-
-
-
+    /* Botones Bootstrap */
+    .btn { background-color: var(--btn-bg) !important; color: var(--btn-fg) !important; border: 1px solid var(--btn-fg) !important; }
+    .nav-tabs { background-color: transparent; }
+    .nav-tabs .nav-link { background-color: transparent; color: var(--fg); }
+    .nav-tabs .nav-link.active { background-color: transparent; color: var(--fg); }
+    .nav-tabs .nav-link:hover { background-color: var(--hover-bg); }
   </style>
-
   {% endblock %}
 </head>
 
@@ -165,9 +120,8 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg mb-3 shadow-sm">
     <div class="container-fluid">
-      <!-- Logo que lleva al inicio -->
       <a class="navbar-brand fw-bold" href="{% url 'panel_principal' %}">
-      <img src="{% static 'images/Logo2.png' %}" alt="Car Icon" style="height: 24px; width: auto;">
+        <img src="{% static 'images/Logo2.png' %}" alt="Car Icon" style="height: 48px; width: auto;">
       </a>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#carNavbar" aria-controls="carNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -176,44 +130,43 @@
 
       <div class="collapse navbar-collapse" id="carNavbar">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link" href="{% url 'ingreso' %}">Ingresar diagnóstico</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'lista_diagnosticos' %}">Diagnósticos</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'accion_list' %}">Acciones</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'comp_accion_list' %}">Componente + Acción</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'componente_list' %}">Componentes</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'ingreso' %}"></a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'lista_diagnosticos' %}"></a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accion_list' %}"></a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'comp_accion_list' %}"></a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'componente_list' %}"></a></li>
         </ul>
-
+        
         <!-- Botones de tema -->
         <ul class="navbar-nav ms-auto">
           <li class="nav-item d-flex align-items-center">
             <span class="me-2">🎨</span>
-            <span class="theme-btn rojo me-1" onclick="setTheme('rojo')"></span>
-            <span class="theme-btn amarillo me-1" onclick="setTheme('amarillo')"></span>
-            <span class="theme-btn celeste me-1" onclick="setTheme('celeste')"></span>
-            <span class="theme-btn gris" onclick="setTheme('gris')"></span>
+            <span class="theme-btn piedra me-1" title="piedra (oscuro)" role="button" aria-label="Tema piedra" onclick="setTheme('piedra')"></span>
+            <span class="theme-btn charcoal me-1" title="Charcoal (oscuro)" role="button" aria-label="Tema charcoal" onclick="setTheme('charcoal')"></span>
+            <span class="theme-btn forest me-1" title="Forest (oscuro)" role="button" aria-label="Tema forest" onclick="setTheme('forest')"></span>
+            <span class="theme-btn plum me-2" title="Plum (oscuro)" role="button" aria-label="Tema plum" onclick="setTheme('plum')"></span>
+            <span class="theme-btn cyan me-1" title="cyan (claro)" role="button" aria-label="Tema cyan" onclick="setTheme('cyan')"></span>
+            <span class="theme-btn sand me-1" title="Sand (claro)" role="button" aria-label="Tema sand" onclick="setTheme('sand')"></span>
+            <span class="theme-btn sage me-1" title="Sage (claro)" role="button" aria-label="Tema sage" onclick="setTheme('sage')"></span>
+            <span class="theme-btn sky" title="Sky (claro)" role="button" aria-label="Tema sky" onclick="setTheme('sky')"></span>
           </li>
         </ul>
+        
         <!-- Usuario -->
-<ul class="navbar-nav ms-auto">
-  {% if user.is_authenticated %}
-    <li class="nav-item d-flex align-items-center me-2">
-      <span class="fw-bold">👋 {{ user.username }}</span>
-    </li>
-    <li class="nav-item">
-      <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Salir</a>
-    </li>
-  {% else %}
-    <li class="nav-item">
-      <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">Ingresar</a>
-    </li>
-  {% endif %}
-
-  
-</ul>
-
-
-
-
+        <ul class="navbar-nav ms-auto">
+          {% if user.is_authenticated %}
+            <li class="nav-item d-flex align-items-center me-2">
+              <span class="fw-bold">👋 {{ user.username }}</span>
+            </li>
+            <li class="nav-item">
+              <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Salir</a>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">Ingresar</a>
+            </li>
+          {% endif %}
+        </ul>
       </div>
     </div>
   </nav>
@@ -237,7 +190,7 @@
   </main>
 
   <!-- Footer -->
-  <footer class="mt-auto py-3  border-top">
+  <footer class="mt-auto py-3 border-top">
     <div class="container text-center text-muted small">
       © {{ now|date:"Y" }} Taller Mecánico
     </div>
@@ -247,16 +200,30 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // -------- Script de selección de tema --------
+    // Script de selección de tema
     function setTheme(theme) {
+      const legacyToNew = { rojo: 'plum', amarillo: 'sand', celeste: 'sky', gris: 'charcoal' };
+      const newToLegacy = { plum: 'rojo', sand: 'amarillo', sky: 'celeste', charcoal: 'gris' };
+      const finalTheme = legacyToNew[theme] || theme;
+
+      // Limpia clases previas de tema
       document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
-      document.body.classList.add(`theme-${theme}`);
-      localStorage.setItem("theme", theme);
+
+      // Agrega clase del tema nuevo
+      document.body.classList.add(`theme-${finalTheme}`);
+
+      // Agrega también la clase alias antigua (si existe) para CSS legado
+      const legacyAlias = newToLegacy[finalTheme];
+      if (legacyAlias) {
+        document.body.classList.add(`theme-${legacyAlias}`);
+      }
+
+      localStorage.setItem("theme", finalTheme);
     }
 
     // Restaurar tema guardado
     document.addEventListener("DOMContentLoaded", function() {
-      const saved = localStorage.getItem("theme") || "rojo"; // por defecto rojo
+      const saved = localStorage.getItem("theme") || "cyan";
       setTheme(saved);
     });
   </script>
@@ -266,15 +233,10 @@
 
   <!-- Select2 -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-  
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-
-
 
   {% block extra_js %}
     <script src="{% static 'js/plano-interactivo.js' %}"></script>
   {% endblock %}
 </body>
 </html>
-

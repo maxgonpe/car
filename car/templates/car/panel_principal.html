@@ -30,6 +30,15 @@
     text-decoration: none; 
     }
 
+    /* Estilo para temas claros */
+    body.theme-porcelain .nav-link,
+    body.theme-sand .nav-link,
+    body.theme-sage .nav-link,
+    body.theme-sky .nav-link,
+    body.theme-cyan .nav-link {
+        color: black !important; /* Cambia a un color oscuro */
+    }
+
     .nav-link:hover {
         color: #ccc; /* Color al pasar el mouse, ajusta según prefieras */
     }
@@ -221,6 +230,15 @@
             </div>
           </a>
         </div>
+
+        <div class="col-6 col-md-4 col-lg-3">
+  <a href="{% url 'repuesto_list' %}" class="card text-center shadow-sm h-100 link-card">
+    <div class="card-body d-flex flex-column justify-content-center">
+      <div class="display-6">🏷️</div>
+      <h6 class="mt-2">Repuestos</h6>
+    </div>
+  </a>
+</div>
 
         
       </div>

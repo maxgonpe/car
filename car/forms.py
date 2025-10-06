@@ -2,7 +2,7 @@ from django import forms
 from .models import Componente, Cliente, Vehiculo,\
                     Diagnostico,Accion, ComponenteAccion,\
                     Mecanico, Trabajo, TrabajoFoto,\
-                    Venta, VentaItem
+                    Venta, VentaItem, Repuesto
 
 class MecanicoForm(forms.ModelForm):
     class Meta:
@@ -134,3 +134,15 @@ class VentaItemForm(forms.ModelForm):
     class Meta:
         model = VentaItem
         fields = ["repuesto_stock", "cantidad", "precio_unitario", "subtotal"]
+
+class RepuestoForm(forms.ModelForm):
+    class Meta:
+        model = Repuesto
+        fields = [
+            "sku", "oem", "referencia", "nombre", "marca",
+            "descripcion", "medida", "posicion", "unidad",
+            "precio_costo", "precio_venta", "codigo_barra", "stock"
+        ]
+        widgets = {
+            "descripcion": forms.Textarea(attrs={"rows": 3}),
+        }

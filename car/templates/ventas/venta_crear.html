@@ -22,7 +22,8 @@
           <div class="col-md-6">
             <h5>Buscar repuesto</h5>
             <label for="producto-search" class="form-label">SKU, OEM, referencia, nombre, marca, código</label>
-            <select id="producto-search" style="width:100%"></select>
+            <input type="text" id="producto-search" style="width:100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;"/>
+            <div id="search-results" class="mt-2" style="border: 1px solid #ccc; max-height: 200px; overflow-y: auto;"></div>
             <div class="mt-2">
               <button type="button" id="add-selected" class="btn btn-primary me-2">➕ Agregar</button>
               <button type="button" id="clear-search" class="btn btn-light">Limpiar</button>
@@ -122,17 +123,12 @@
 
 </div>
 
-<!-- jQuery y Select2 -->
+<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-
-<!-- Aquí iría el mismo script JS que ya tienes para manejar carrito -->
 
 <script>
-$(function(){
-
-  // cart: array de items -> {repuesto_stock_id, cantidad, precio_unitario, subtotal, repuesto_nombre, text, stock, deposito}
+$(function() {
+  // cart: array de items
   let cart = [];
 
   function updateHiddenCart() {
@@ -151,7 +147,7 @@ $(function(){
       const tr = $('<tr/>');
       const repCol = $('<td/>').html(`<div><strong>${it.repuesto_nombre}</strong></div><div class="text-muted small">${it.text}</div><div class="text-muted small">Dep: ${it.deposito} — Stock: ${it.stock}</div>`);
       const qtyInput = $(`<input type="number" class="form-control form-control-sm qty" min="1" value="${it.cantidad}" style="width:90px">`);
-      qtyInput.on('change input', function(){
+      qtyInput.on('change input', function() {
         let q = parseInt($(this).val() || 0);
         if (q < 1) { q = 1; $(this).val(q); }
         it.cantidad = q;
@@ -164,8 +160,8 @@ $(function(){
       const subtotalInput = $('<input type="text" readonly class="form-control form-control-sm subtotal" style="width:120px">').val(parseFloat(it.subtotal).toFixed(2));
       const subCol = $('<td/>').append(subtotalInput);
       const delBtn = $('<button type="button" class="btn btn-danger btn-sm">✖</button>');
-      delBtn.on('click', function(){
-        cart.splice(i,1);
+      delBtn.on('click', function() {
+        cart.splice(i, 1);
         updateHiddenCart();
         renderTable();
       });
@@ -178,63 +174,68 @@ $(function(){
     calcularTotal();
   }
 
-  // inicializar select2 (debe existir una view 'repuesto_lookup' que devuelva JSON)
-  $("#producto-search").select2({
-    placeholder: "Escribe para buscar repuestos...",
-    minimumInputLength: 1,
-    ajax: {
+  // Manejar búsqueda con caja de texto
+  $('#producto-search').on('input', function() {
+    const query = $(this).val();
+    if (query.length < 1) {
+      $('#search-results').empty(); 
+      return; // Si no hay texto, no hacer nada
+    }
+
+    $.ajax({
       url: "{% url 'repuesto_lookup' %}",
       dataType: "json",
-      delay: 250,
-      data: function(params){ return { q: params.term || "" }; },
-      processResults: function(data){ return { results: data.results }; },
-      error: function(e) { console.error(e); }
-    },
-    templateResult: function(item){
-      if (!item.id) return item.text;
-      return $('<span>' + item.text + ' <small class="text-muted"> (stock: ' + item.stock + ') </small></span>');
-    },
-    escapeMarkup: function(m){ return m; },
-    width: "100%",
+      data: { q: query },
+      success: function(data) {
+        // Mostrar los resultados de búsqueda
+        let resultsContainer = $('#search-results').empty();
+        data.results.forEach(item => {
+          const resultItem = $('<div class="result-item" style="cursor:pointer; padding: 5px;">')
+            .text(item.text + ` (Stock: ${item.stock})`)
+            .data('item', item) // Guardamos el item en el elemento
+            .on('click', function() {
+              addProductToCart($(this).data('item'));
+              resultsContainer.empty(); // Limpiar resultados después de seleccionar
+            });
+          resultsContainer.append(resultItem);
+        });
+      },
+      error: function(e) {
+        console.error(e);
+      }
+    });
   });
 
-  // agregar seleccionado
-  $('#add-selected').on('click', function(){
-    const sel = $('#producto-search').select2('data')[0];
-    if (!sel) { alert('Selecciona un repuesto'); return; }
-    // si existe mismo stock id, incrementar cantidad
-    const existing = cart.find(c => String(c.repuesto_stock_id) === String(sel.id));
+  // Función para agregar el producto al carrito
+  function addProductToCart(selectedItem) {
+    const existing = cart.find(c => String(c.repuesto_stock_id) === String(selectedItem.id));
     if (existing) {
       existing.cantidad = (existing.cantidad || 0) + 1;
       existing.subtotal = (parseFloat(existing.precio_unitario) * existing.cantidad).toFixed(2);
     } else {
-      // precio_venta debería venir como string/num desde el lookup
-      const precio = (sel.precio_venta !== undefined) ? parseFloat(String(sel.precio_venta)) : 0;
+      const precio = (selectedItem.precio_venta !== undefined) ? parseFloat(String(selectedItem.precio_venta)) : 0;
       cart.push({
-        repuesto_stock_id: sel.id,
+        repuesto_stock_id: selectedItem.id,
         cantidad: 1,
         precio_unitario: precio.toFixed(2),
         subtotal: precio.toFixed(2),
-        repuesto_nombre: sel.repuesto_nombre || sel.text,
-        text: sel.text || "",
-        stock: sel.stock || 0,
-        deposito: sel.deposito || ""
+        repuesto_nombre: selectedItem.repuesto_nombre || selectedItem.text,
+        text: selectedItem.text || "",
+        stock: selectedItem.stock || 0,
+        deposito: selectedItem.deposito || ""
       });
     }
     renderTable();
-    $('#producto-search').val(null).trigger('change');
+    $('#producto-search').val(''); // Limpiar el campo de búsqueda
+  }
+
+  $('#clear-search').on('click', function() {
+    $('#producto-search').val('');
+    $('#search-results').empty(); // Limpiar resultados
   });
 
-  // agregar con enter/selección
-  $('#producto-search').on('select2:select', function(e){
-    const sel = e.params.data;
-    $('#add-selected').trigger('click');
-  });
-
-  $('#clear-search').on('click', function(){ $('#producto-search').val(null).trigger('change'); });
-
-  // al enviar el form: asegurarnos que cart no esté vacío
-  $('#venta-form').on('submit', function(e){
+  // Al enviar el form: asegurarnos que cart no esté vacío
+  $('#venta-form').on('submit', function(e) {
     if (cart.length === 0) {
       e.preventDefault();
       alert("Agrega al menos un producto a la venta.");
@@ -243,7 +244,6 @@ $(function(){
     // hidden already updated por renderTable/updateHiddenCart()
     return true;
   });
-
 });
 </script>
 

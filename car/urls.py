@@ -9,7 +9,9 @@ from .views import ClienteListView,VehiculoListView,\
                    VehiculoCreateView,VehiculoUpdateView,\
                    VehiculoDeleteView,MecanicoListView,\
                    MecanicoDeleteView,MecanicoCreateView,\
-                   MecanicoUpdateView 
+                   MecanicoUpdateView,RepuestoCreateView,\
+                   RepuestoUpdateView,RepuestoDeleteView,\
+                   RepuestoListView 
 
 urlpatterns = [
     path("login/", views.login_view, name="login"),
@@ -82,7 +84,11 @@ urlpatterns = [
     path("<int:pk>/", views.venta_detalle, name="venta_detalle"),
     path("historial/", views.ventas_historial, name="ventas_historial"),
     path("repuesto-lookup/", views.repuesto_lookup, name="repuesto_lookup"),
-
+    # Repuestod
+    path("repuestos/", RepuestoListView.as_view(), name="repuesto_list"),
+    path("repuestos/nuevo/", RepuestoCreateView.as_view(), name="repuesto_create"),
+    path("repuestos/<int:pk>/editar/", RepuestoUpdateView.as_view(), name="repuesto_update"),
+    path("repuestos/<int:pk>/eliminar/", RepuestoDeleteView.as_view(), name="repuesto_delete"),
 ]
 
 if settings.DEBUG:

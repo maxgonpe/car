@@ -1320,3 +1320,30 @@ def repuesto_lookup(request):
     print("results :",{"results": results})
     return JsonResponse({"results": results})
 
+
+class RepuestoListView(ListView):
+    model = Repuesto
+    template_name = "repuestos/repuesto_list.html"
+    context_object_name = "repuestos"
+
+
+class RepuestoCreateView(CreateView):
+    model = Repuesto
+    fields = ["nombre", "marca", "descripcion", "medida", "posicion",
+              "unidad", "precio_costo", "precio_venta", "codigo_barra", "stock"]
+    template_name = "repuestos/repuesto_form.html"
+    success_url = reverse_lazy("repuesto_list")
+
+
+class RepuestoUpdateView(UpdateView):
+    model = Repuesto
+    fields = ["nombre", "marca", "descripcion", "medida", "posicion",
+              "unidad", "precio_costo", "precio_venta", "codigo_barra", "stock"]
+    template_name = "repuestos/repuesto_form.html"
+    success_url = reverse_lazy("repuesto_list")
+
+
+class RepuestoDeleteView(DeleteView):
+    model = Repuesto
+    template_name = "repuestos/repuesto_confirm_delete.html"
+    success_url = reverse_lazy("repuesto_list")
